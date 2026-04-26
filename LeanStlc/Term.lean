@@ -11,7 +11,7 @@ infixr:40 " -t> " => Ty.arrow
 protected def Ty.repr (a : Ty) (p : Nat) : Std.Format :=
   match a with
   | .base => "⊤"
-  | .arrow .base B => Ty.repr .base p ++ " -> " ++ Ty.repr B p
+  | .arrow ⊤ B => "⊤" ++ " -> " ++ Ty.repr B p
   | .arrow A B => "(" ++ Ty.repr A p ++ ") -> " ++ Ty.repr B p
 
 instance : Repr Ty where
@@ -89,7 +89,7 @@ theorem subst_lam {σ A t} : (:λ[A] t)[σ] = :λ[A] t[σ.lift] := by
 theorem Term.from_action_compose {x} {σ τ : Subst Term}
   : (from_action (σ x))[τ] = from_action ((σ ∘ τ) x)
 := by
-  simp [Term.from_action, Subst.compose]
+  simp [Subst.compose]
   generalize zdef : σ x = z
   cases z <;> simp [Term.from_action]
 

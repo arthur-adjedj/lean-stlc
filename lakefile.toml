@@ -8,6 +8,18 @@ scope = "amarmaduke"
 git = "https://github.com/amarmaduke/lean-subst"
 rev = "main"
 
+[[require]]
+name = "aesop"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/aesop"
+rev = "master"
+
+# A path dependency
+[[require]]
+name = "LeanALaCarte"
+path = "/home/belazy/Documents/LeanALaCarte"
+
+
 [[lean_lib]]
 name = "LeanStlc"
 

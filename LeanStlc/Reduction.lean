@@ -54,6 +54,8 @@ namespace ParRed
     .app f' a'
   | .lam A t => .lam A (complete t)
   | .var x => .var x
+  termination_by t => sizeOf t
+
 
   theorem subst {t t'} (σ : Subst Term) :
     t ~p> t' ->
