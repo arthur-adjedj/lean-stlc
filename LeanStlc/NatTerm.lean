@@ -5,16 +5,23 @@ import LeanALaCarte.ModularCommand
 import LeanALaCarte.ModDef
 import LeanStlc.Reduction
 import LeanStlc.Term
+import LeanStlc.Typing
+import LeanStlc.Preservation
+
 open LeanSubst
 namespace LeanSubst.Star
   @[grind .]
   theorem step1 {R : α → α → Prop} : R x y → LeanSubst.Star R x y := (.step .refl ·)
 end LeanSubst.Star
 namespace NatExt
-modular (name := `part1)
+
+modular (name := `Term)
 
   inductive Ty extends Ty where
     | nat
+
+  notation "⊤" => Ty.base
+  infixr:40 " -t> " => Ty.arrow
 
   mod_def extends Ty.repr where
     matcher match_1 with
@@ -127,25 +134,7 @@ modular (name := `part1)
     | .app f x => (size f + size x) + 10
   termination_by structural t => t
 
-modular (imports := #[`part1]) (name := `part2)
-  inductive Red extends Red where
-    | succ : Red n₁ n₂ → Red n₁.succ n₂.succ
-    | natRec1 {P0 P0' PS n} :
-      Red P0 P0' ->
-      Red (.natRec P0 PS n) (.natRec P0' PS n)
-    | natRec2 {P0 PS PS' n} :
-      Red PS PS' ->
-      Red (.natRec P0 PS n) (.natRec P0 PS' n)
-    | natRec3 {P0 PS n n'} :
-      Red n n' ->
-      Red (.natRec P0 PS n) (.natRec P0 PS n')
-    | natRecZero {P0 PS} :
-      Red (.natRec P0 PS .zero) P0
-    | natRecSucc {P0 PS n} :
-      Red
-        (.natRec P0 PS (.succ n))
-        (.app (.app PS n) (.natRec P0 PS n))
-
+modular (imports := #[`Term]) (name := `ParRed)
   inductive ParRed extends ParRed where
     | zero : ParRed .zero .zero
     | succ : ParRed n₁ n₂ → ParRed n₁.succ n₂.succ
@@ -171,7 +160,7 @@ modular (imports := #[`part1]) (name := `part2)
   infix:80 " ~ps> " => ActionRed ParRed
   infix:81 " ~ps>* " => Star (ActionRed ParRed)
 
-  attribute [grind] Red ParRed
+  attribute [grind] ParRed
 
   namespace ParRed
 
@@ -188,41 +177,37 @@ modular (imports := #[`part1]) (name := `part2)
 
   @[grind .]
   mod_def subst_red_lift extends ParRed.subst_red_lift
-
-theorem hsubst {t t' : Term} {σ σ' : LeanSubst.Subst Term} :
-  (∀ x, ActionRed ParRed (σ x) (σ' x)) ->
-  ParRed t t' ->
-  ParRed t[σ] t'[σ']
-:= by
-  intros h1 t2
-  induction t2 generalizing σ σ' <;> try grind (splits := 3)
-  case var =>
-    simp only [subst_var, Term.from_action]
-    repeat split <;> try grind [ActionRed]
-  case beta A b b' a a' r1 r2 ih1 ih2 =>
-    have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ'])
-    simp only [apply_compose, subst_app, subst_lam, Subst.rewrite3_replace,
-      Subst.rewrite2] at *
-    sorry
-  case app  =>
-    simp only [subst_app]
-    apply ParRed.app <;> grind only [= subst_zero]
-  case lam ih =>
-    simp only [subst_lam]
-    apply ParRed.lam
-    sorry
-  case natRec =>
-    simp only [subst_natRec]
-    apply ParRed.natRec <;> grind only
-  case natRecSucc =>
-    simp only [subst_natRec,subst_app, subst_succ] at *
-    apply ParRed.natRecSucc <;> grind only
-
-modular (name := `part3) (imports := #[`part2])
-
+  theorem hsubst {t t' : Term} {σ σ' : LeanSubst.Subst Term} :
+    (∀ x, ActionRed ParRed (σ x) (σ' x)) ->
+    ParRed t t' ->
+    ParRed t[σ] t'[σ']
+  := by
+    intros h1 t2
+    induction t2 generalizing σ σ' <;> try grind (splits := 3)
+    case var =>
+      simp only [subst_var, Term.from_action]
+      repeat split <;> try grind [ActionRed]
+    case beta A b b' a a' r1 r2 ih1 ih2 =>
+      have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ'])
+      simp only [apply_compose, subst_app, subst_lam, Subst.rewrite3_replace,
+        Subst.rewrite2] at *
+      sorry
+    case app  =>
+      simp only [subst_app]
+      apply ParRed.app <;> grind only [= subst_zero]
+    case lam ih =>
+      simp only [subst_lam]
+      apply ParRed.lam
+      sorry
+    case natRec =>
+      simp only [subst_natRec]
+      apply ParRed.natRec <;> grind only
+    case natRecSucc =>
+      simp only [subst_natRec,subst_app, subst_succ] at *
+      apply ParRed.natRecSucc <;> grind only
   add_mapping _root_.ParRed.hsubst => ParRed.hsubst
 
-  @[simp, grind]
+    @[simp, grind]
   mod_def complete extends ParRed.complete where
     matcher match_1 with
       | .zero => .zero
@@ -252,30 +237,30 @@ modular (name := `part3) (imports := #[`part2])
   mod_def extends ParRed.instSubstitutiveTerm
 
   mod_def extends ParRed.instHasTriangleTerm
+end ParRed
 
--- modular (name := `part4) (imports := #[`part3])
+modular (name := `Red) (imports := #[`ParRed])
+  inductive Red extends Red where
+    | succ : Red n₁ n₂ → Red n₁.succ n₂.succ
+    | natRec1 {P0 P0' PS n} :
+      Red P0 P0' ->
+      Red (.natRec P0 PS n) (.natRec P0' PS n)
+    | natRec2 {P0 PS PS' n} :
+      Red PS PS' ->
+      Red (.natRec P0 PS n) (.natRec P0 PS' n)
+    | natRec3 {P0 PS n n'} :
+      Red n n' ->
+      Red (.natRec P0 PS n) (.natRec P0 PS n')
+    | natRecZero {P0 PS} :
+      Red (.natRec P0 PS .zero) P0
+    | natRecSucc {P0 PS n} :
+      Red
+        (.natRec P0 PS (.succ n))
+        (.app (.app PS n) (.natRec P0 PS n))
 
-  -- mod_def triangle extends _root_.ParRed.triangle where
-    -- finally
-      -- all_goals
-        -- try grind
-        -- try intros
-      -- · rw [complete.eq_def]
-        -- split <;> try grind
-        -- next h =>
-          -- cases h
-          -- apply natRecSucc
---
-      -- · rw [complete]
-        -- (repeat apply ParRed.app) <;> try assumption
-
-  -- mod_def extends ParRed.instSubstitutiveTerm
-  -- mod_def extends ParRed.instHasTriangleTerm
-
-  end ParRed
+  attribute [grind] Red
 
   namespace Red
--- modular (name := `part5) (imports := #[`part3])
 
     mod_def subst extends Red.subst where
       finally all_goals grind
@@ -324,7 +309,63 @@ modular (name := `part3) (imports := #[`part2])
         · simp only [subst_natRec]
           apply Star.congr3 _ Red.natRec1 Red.natRec2 Red.natRec3 <;> grind
 
-
-
     mod_def confluence extends _root_.Red.confluence
   end Red
+
+modular (name := `Typing) (imports := #[`Term])
+  inductive Typing extends Typing where
+    | zero  : Typing Γ .zero .nat
+    | succ  : Typing Γ n .nat → Typing Γ (.succ n) .nat
+    | natRec : Typing Γ P0 A → Typing Γ PS (.nat -t> A -t> A) → Typing Γ n .nat → Typing Γ (.natRec P0 PS n) A
+  notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
+
+  mod_def extends typing_renaming_lift where
+    finally
+      all_goals grind only
+
+  mod_def extends typing_weaken where
+    finally
+      all_goals first | grind [Typing, Ren.apply] | intros <;> sorry
+
+  mod_def extends typing_subst_lift where
+    finally
+      all_goals grind only
+
+  mod_def extends typing_subst where
+    finally
+      all_goals intros
+      · rw [subst_zero]
+        constructor
+      · rw [subst_succ]
+        constructor
+        grind only
+      · rw [subst_natRec]
+        constructor <;>
+        grind only
+
+
+  mod_def extends typing_beta where
+    finally
+      all_goals grind only
+
+modular (name := `Preservation) (imports := #[`Red, `Typing])
+  mod_def extends preservation_step where
+    finally
+      all_goals (try grind) <;> intros
+      · next r =>
+          cases r
+          constructor
+          grind only
+      · next r =>
+          cases r
+          · constructor <;> grind only
+          · constructor <;> grind only
+          · constructor <;> grind only
+          · assumption
+          · next h _ =>
+              cases h
+              constructor <;>
+              (constructor <;>
+              assumption)
+
+  mod_def extends preservation
