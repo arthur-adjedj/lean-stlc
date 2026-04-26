@@ -127,7 +127,7 @@ modular (name := `part1)
     | .app f x => (size f + size x) + 10
   termination_by structural t => t
 
--- modular (imports := #[`part1]) (name := `part2)
+modular (imports := #[`part1]) (name := `part2)
   inductive Red extends Red where
     | succ : Red n₁ n₂ → Red n₁.succ n₂.succ
     | natRec1 {P0 P0' PS n} :
@@ -188,53 +188,39 @@ modular (name := `part1)
 
   @[grind .]
   mod_def subst_red_lift extends ParRed.subst_red_lift
-  theorem hsubst {t t' : Term} {σ σ' : LeanSubst.Subst Term} :
-    (∀ x, ActionRed ParRed (σ x) (σ' x)) ->
-    ParRed t t' ->
-    ParRed t[σ] t'[σ']
-  := by sorry
+
+theorem hsubst {t t' : Term} {σ σ' : LeanSubst.Subst Term} :
+  (∀ x, ActionRed ParRed (σ x) (σ' x)) ->
+  ParRed t t' ->
+  ParRed t[σ] t'[σ']
+:= by
+  intros h1 t2
+  induction t2 generalizing σ σ' <;> try grind (splits := 3)
+  case var =>
+    simp only [subst_var, Term.from_action]
+    repeat split <;> try grind [ActionRed]
+  case beta A b b' a a' r1 r2 ih1 ih2 =>
+    have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ'])
+    simp only [apply_compose, subst_app, subst_lam, Subst.rewrite3_replace,
+      Subst.rewrite2] at *
+    sorry
+  case app  =>
+    simp only [subst_app]
+    apply ParRed.app <;> grind only [= subst_zero]
+  case lam ih =>
+    simp only [subst_lam]
+    apply ParRed.lam
+    sorry
+  case natRec =>
+    simp only [subst_natRec]
+    apply ParRed.natRec <;> grind only
+  case natRecSucc =>
+    simp only [subst_natRec,subst_app, subst_succ] at *
+    apply ParRed.natRecSucc <;> grind only
+
+modular (name := `part3) (imports := #[`part2])
 
   add_mapping _root_.ParRed.hsubst => ParRed.hsubst
-
-  -- intros h1 t2
-  -- induction t2 generalizing σ σ' <;> try grind (splits := 3)
-  -- case var =>
-    -- simp [Term.from_action]
-    -- repeat split <;> try grind [ActionRed]
-  -- case beta A b b' a a' r1 r2 ih1 ih2 =>
-    -- have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ'])
-    -- simp at *
-  --
-  -- sorry
-
-
-
-
-  -- mod_def hsubst extends ParRed.hsubst where
-    -- finally
-      -- all_goals try grind
-      -- intros a₁ a₂ a₂ a₁ih a₂ih a₃ih t σ σ' h3 h4
-      -- rw [subst_natRec]
-      -- cases h4
-      -- · rw [subst_natRec]
-        -- apply ParRed.natRec
-        -- · exact a₁ih h3 ‹_›
-        -- · exact a₂ih h3 ‹_›
-        -- · exact a₃ih h3 ‹_›
-      -- · apply ParRed.natRecZero
-        -- · exact a₁ih h3 ‹_›
-        -- · exact a₂ih h3 ‹_›
-      -- · rw [subst_succ,subst_app,subst_app]
-        -- apply ParRed.natRecSucc
-        -- · exact a₂ih h3 ‹_›
-        -- · exact a₂ih h3 ‹_›
-        -- · have := a₃ih h3 (ParRed.succ ‹_›)
-          -- rw [subst_succ,subst_succ] at this
-          -- cases this
-          -- assumption
-        -- ·
-
--- modular (name := `part3) (imports := #[`part2])
 
   @[simp, grind]
   mod_def complete extends ParRed.complete where
@@ -324,7 +310,21 @@ modular (name := `part1)
     mod_def extends Red.seqs_action_destruct
     mod_def extends Red.pars_action_iff_seqs_action
 
-    set_option trace.Modular true in
-    mod_def subst_arg extends _root_.Red.subst_arg
+    mod_def extends Red.subst_action
+    @[grind .]
+    mod_def extends Red.subst_red_lift
+
+    mod_def subst_arg extends _root_.Red.subst_arg where
+      finally
+        all_goals intros
+        · simp; constructor
+        · simp only [subst_succ]
+          apply Star.congr1 _ Red.succ
+          grind
+        · simp only [subst_natRec]
+          apply Star.congr3 _ Red.natRec1 Red.natRec2 Red.natRec3 <;> grind
+
+
+
     mod_def confluence extends _root_.Red.confluence
   end Red
