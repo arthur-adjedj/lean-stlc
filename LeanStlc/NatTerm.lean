@@ -7,6 +7,8 @@ import LeanStlc.Reduction
 import LeanStlc.Term
 import LeanStlc.Typing
 import LeanStlc.Preservation
+import LeanStlc.Infer
+import LeanStlc.Progress
 
 open LeanSubst
 namespace LeanSubst.Star
@@ -351,7 +353,7 @@ modular (name := `Typing) (imports := #[`Term])
 modular (name := `Preservation) (imports := #[`Red, `Typing])
   mod_def extends preservation_step where
     finally
-      all_goals (try grind) <;> intros
+      all_goals (try grind only) <;> intros
       · next r =>
           cases r
           constructor
@@ -369,3 +371,66 @@ modular (name := `Preservation) (imports := #[`Red, `Typing])
               assumption)
 
   mod_def extends preservation
+
+modular (name := `Infer) (imports := #[`Typing])
+  deriving instance DecidableEq for Ty
+
+  add_mapping _root_.instDecidableEqTy => instDecidableEqTy
+
+  mod_def extends is_arrow where
+    matcher match_1 with
+      | .nat => .none
+
+  @[simp]
+  mod_def extends infer where
+    matcher match_1 with
+
+    matcher match_3 Γ with
+      | .zero => some .nat
+      | .succ n => do
+        let .nat ← infer Γ n | none
+        return .nat
+      | .natRec P0 PS n => do
+        let .nat ← infer Γ n | none
+        let A ← infer Γ P0
+        let .nat -t> C -t> D ← infer Γ PS | none
+        if A = C ∧ A = D then
+          return A
+        else none
+
+  -- currently fails with a weird unification error: two (synthetic opaque) mvars refuse to unify with a `readOnlyMVarWithBiggerLCtx` trace.
+  -- mod_def extends infer_sound
+
+@[simp]
+def Term.is_nat_lit : Term -> Bool
+  | .zero | .succ _ => true
+  | _ => false
+
+modular (name := `Progress) (imports := #[`Red, `Typing])
+  mod_def Term.is_lam extends _root_.Term.is_lam where
+    matcher match_1 with
+
+  inductive Value extends Value where
+    | zero : Value .zero
+    | succ : Value n → Value (.succ n)
+    | natRec : Value P0 → Value PS → Value n →
+      ¬ n.is_nat_lit → Value (.natRec P0 PS n)
+
+  mod_def extends value_sound where
+    finally
+      all_goals try grind only [Term.is_nat_lit]
+
+
+
+/-DONE
+  - Term
+  - Reduction
+  - Typing
+  - Preservation
+  - Infer
+  TODO
+  - Progress
+  - SNi
+  - WeakNorm
+  - StrongNorm
+-/
