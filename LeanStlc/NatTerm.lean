@@ -327,7 +327,17 @@ modular (name := `Typing) (imports := #[`Term])
 
   mod_def extends typing_weaken where
     finally
-      all_goals first | grind [Typing, Ren.apply] | intros <;> sorry
+      all_goals first | grind only [Ren.apply] | intros
+      · constructor
+      · rename_i ih _ _ _
+        constructor
+        apply ih
+        assumption
+      · rename_i ih1 ih2 ih3 _ _ _
+        constructor
+        · apply ih1; assumption
+        · apply ih2; assumption
+        · apply ih3; assumption
 
   mod_def extends typing_subst_lift where
     finally
@@ -456,9 +466,6 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
           | apply Red.natRec1; assumption
           | apply Red.natRec2; assumption
           | apply Red.natRec3; assumption)
-
-
-
 
 
 /-DONE
