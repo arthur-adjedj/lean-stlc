@@ -9,6 +9,8 @@ import LeanStlc.Typing
 import LeanStlc.Preservation
 import LeanStlc.Infer
 import LeanStlc.Progress
+import LeanStlc.SNi
+import LeanStlc.StrongNorm
 
 open LeanSubst
 namespace LeanSubst.Star
@@ -43,13 +45,19 @@ modular (name := `Term)
       | .zero => "O"
       | Term.succ n => s!"S ({Term.repr n y})"
       | .natRec P0 PS n => s!"rec ({Term.repr P0 y}) ({Term.repr PS y}) ({Term.repr n y})"
--- #exit
+
   @[implicit_reducible,instance] -- TODO infer reducibility attribute from what it extends
   mod_def extends instReprTerm
 
   prefix:max "#" => Term.var
   infixl:66 " :@ " => Term.app
   notation ":λ[" A "] " t => Term.lam A t
+
+
+  @[simp, grind]
+  def Term.is_nat_lit : Term -> Prop
+    | .zero | .succ _ => True
+    | _ => False
 
   mod_def extends Term.from_action where
     matcher match_1 with
@@ -264,54 +272,75 @@ modular (name := `Red) (imports := #[`ParRed])
 
   namespace Red
 
-    mod_def subst extends Red.subst where
-      finally all_goals grind
+  mod_def subst extends Red.subst where
+    finally all_goals grind
 
-    @[grind .]
-    mod_def extends Red.seq_implies_par where
-      finally
-        all_goals intros <;> try grind
+  @[grind .]
+  mod_def extends Red.seq_implies_par where
+    finally
+      all_goals intros <;> try grind
 
-    @[grind .]
-    mod_def extends Red.seqs_implies_pars
+  @[grind .]
+  mod_def extends Red.seqs_implies_pars
 
-    mod_def extends Red.par_implies_seqs where
-      finally
-        all_goals intros
-        · constructor
-        · apply LeanSubst.Star.congr1 <;> grind
-        · apply LeanSubst.Star.congr3 <;> grind
-        · apply LeanSubst.Star.trans
-          · apply LeanSubst.Star.step1
-            exact Red.natRecZero
-          · assumption
-        · apply LeanSubst.Star.trans
-          · apply LeanSubst.Star.step1
-            exact Red.natRecSucc
-          · apply LeanSubst.Star.congr2 <;> try grind
-            · apply LeanSubst.Star.congr2 <;> grind
+  mod_def extends Red.par_implies_seqs where
+    finally
+      all_goals intros
+      · constructor
+      · apply LeanSubst.Star.congr1 <;> grind
+      · apply LeanSubst.Star.congr3 <;> grind
+      · apply LeanSubst.Star.trans
+        · apply LeanSubst.Star.step1
+          exact Red.natRecZero
+        · assumption
+      · apply LeanSubst.Star.trans
+        · apply LeanSubst.Star.step1
+          exact Red.natRecSucc
+        · apply LeanSubst.Star.congr2 <;> try grind
+          · apply LeanSubst.Star.congr2 <;> grind
 
-    mod_def extends Red.pars_implies_seqs
-    mod_def extends Red.pars_action_lift
-    mod_def extends Red.seqs_action_lift
-    mod_def extends Red.seqs_action_destruct
-    mod_def extends Red.pars_action_iff_seqs_action
+  mod_def extends Red.pars_implies_seqs
+  mod_def extends Red.pars_action_lift
+  mod_def extends Red.seqs_action_lift
+  mod_def extends Red.seqs_action_destruct
+  mod_def extends Red.pars_action_iff_seqs_action
 
-    mod_def extends Red.subst_action
-    @[grind .]
-    mod_def extends Red.subst_red_lift
+  mod_def extends Red.subst_action
+  @[grind .]
+  mod_def extends Red.subst_red_lift
 
-    mod_def subst_arg extends _root_.Red.subst_arg where
-      finally
-        all_goals intros
-        · simp; constructor
-        · simp only [subst_succ]
-          apply Star.congr1 _ Red.succ
-          grind
-        · simp only [subst_natRec]
-          apply Star.congr3 _ Red.natRec1 Red.natRec2 Red.natRec3 <;> grind
+  mod_def subst_arg extends _root_.Red.subst_arg where
+    finally
+      all_goals intros
+      · simp; constructor
+      · simp only [subst_succ]
+        apply Star.congr1 _ Red.succ
+        grind
+      · simp only [subst_natRec]
+        apply Star.congr3 _ Red.natRec1 Red.natRec2 Red.natRec3 <;> grind
 
-    mod_def confluence extends _root_.Red.confluence
+  mod_def confluence extends _root_.Red.confluence
+
+  mod_def extends Red.instSubstitutiveTerm
+
+  mod_def extends Red.instHasConfluenceTerm
+
+  inductive Neutral extends Neutral where
+    | natRec : Neutral n → Neutral (.natRec P0 PS n)
+
+  mod_def extends Red.preservation_of_neutral_step where
+    finally
+      all_goals try grind only
+      · intro _ _ _ h1 ih _ r
+        cases r <;> first
+          | constructor;assumption
+          | cases h1; done
+          | constructor
+            apply ih
+            assumption
+
+  mod_def extends Red.preservation_of_neutral
+
   end Red
 
 modular (name := `Typing) (imports := #[`Term])
@@ -355,7 +384,6 @@ modular (name := `Typing) (imports := #[`Term])
         constructor <;>
         grind only
 
-
   mod_def extends typing_beta where
     finally
       all_goals grind only
@@ -363,22 +391,16 @@ modular (name := `Typing) (imports := #[`Term])
 modular (name := `Preservation) (imports := #[`Red, `Typing])
   mod_def extends preservation_step where
     finally
-      all_goals (try grind only) <;> intros
-      · next r =>
-          cases r
-          constructor
-          grind only
-      · next r =>
-          cases r
-          · constructor <;> grind only
-          · constructor <;> grind only
-          · constructor <;> grind only
-          · assumption
-          · next h _ =>
-              cases h
-              constructor <;>
-              (constructor <;>
-              assumption)
+      all_goals (try grind (splits := 1) only) <;> intros
+      · grind only [Red,Typing]
+      · rename_i r
+        cases r <;> first
+          | grind (splits := 0) only [Typing]
+          | rename_i h _
+            cases h
+            constructor <;>
+            (constructor <;>
+            assumption)
 
   mod_def extends preservation
 
@@ -410,11 +432,6 @@ modular (name := `Infer) (imports := #[`Typing])
 
   -- currently fails with a weird unification error: two (synthetic opaque) mvars refuse to unify with a `readOnlyMVarWithBiggerLCtx` trace.
   -- mod_def extends infer_sound
-
-@[simp, grind]
-def Term.is_nat_lit : Term -> Prop
-  | .zero | .succ _ => True
-  | _ => False
 
 modular (name := `Progress) (imports := #[`Red, `Typing])
   @[grind]
@@ -459,15 +476,102 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
             · right
               constructor
               apply Red.natRecSucc
-            · cases h
+            · contradiction
           · left
             grind only [Value]
-        all_goals (right; constructor ; first
+        all_goals
+          right
+          constructor
+          first
           | apply Red.natRec1; assumption
           | apply Red.natRec2; assumption
-          | apply Red.natRec3; assumption)
+          | apply Red.natRec3; assumption
 
+modular (name := `SNi) (imports := #[`Progress])
 
+  inductive SnHeadRed extends SnHeadRed where --TODO add missing natRec constructor
+  infix:80 " ~>sn " => SnHeadRed
+
+  mod_def extends SnHeadRed.red_compatible where
+    finally all_goals grind only
+
+  mod_def extends SN.subterm_app
+  mod_def extends SN.lam where
+    finally all_goals grind only
+
+  mod_def extends SN.neutral_app where
+    finally all_goals grind only
+
+  mod_def extends SN.weak_head_expansion where
+    finally all_goals grind only
+
+  mod_def extends SN.red_app_preservation where
+    finally all_goals grind only
+
+  mod_def extends SN.backward_closure
+
+  mod_def extends SnIndices
+
+  inductive SNi extends SNi where --TODO add missing constructors
+
+  namespace SNi
+  mod_def extends SNi.SnRenameLemmaType where
+    matcher match_1 with
+
+  mod_def extends SNi.rename
+
+  mod_def extends SNi.SnAntiRenameLemmaType where
+    matcher match_1 with
+
+  mod_def extends SNi.antirename where
+    finally all_goals sorry
+
+  mod_def extends SNi.SnBetaVarLemmaType where
+    matcher match_1 with
+
+  mod_def extends SNi.beta_var where
+    finally all_goals sorry
+
+  mod_def extends SNi.SnPropertyWeakenLemmaType where
+    matcher match_1 with
+
+  mod_def extends SNi.property_weaken
+  mod_def extends SNi.SnSoundLemmaType where
+    matcher match_1 with
+
+  mod_def extends SNi.sound where
+    finally all_goals sorry
+
+  end SNi
+
+modular (name := `StrongNorm) (imports := #[`SNi])
+  namespace StrongNormalizaton
+  mod_def extends StrongNormalizaton.LR where
+    matcher match_1 with
+      | .nat => SNi .nor
+
+  mod_def extends StrongNormalizaton.GR where
+    matcher match_1 with
+
+  mod_def SemanticTyping extends StrongNormalizaton.SemanticTyping
+
+  notation:170 Γ:170 " ⊨s " t:170 " : " A:170 => SemanticTyping Γ t A
+
+  mod_def extends StrongNormalizaton.monotone where
+    finally sorry
+
+  mod_def extends StrongNormalizaton.cr where
+    finally all_goals sorry
+
+  mod_def extends StrongNormalizaton.var
+
+  mod_def extends StrongNormalizaton.fundamental where
+    finally all_goals sorry
+
+  end StrongNormalizaton
+
+  mod_def extends strong_normalization_inductive
+  mod_def extends strong_normalization
 /-DONE
   - Term
   - Reduction
