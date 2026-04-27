@@ -401,12 +401,13 @@ modular (name := `Infer) (imports := #[`Typing])
   -- currently fails with a weird unification error: two (synthetic opaque) mvars refuse to unify with a `readOnlyMVarWithBiggerLCtx` trace.
   -- mod_def extends infer_sound
 
-@[simp]
-def Term.is_nat_lit : Term -> Bool
-  | .zero | .succ _ => true
-  | _ => false
+@[simp, grind]
+def Term.is_nat_lit : Term -> Prop
+  | .zero | .succ _ => True
+  | _ => False
 
 modular (name := `Progress) (imports := #[`Red, `Typing])
+  @[grind]
   mod_def Term.is_lam extends _root_.Term.is_lam where
     matcher match_1 with
 
@@ -420,6 +421,44 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
     finally
       all_goals try grind only [Term.is_nat_lit]
 
+  inductive VarSpine extends VarSpine where
+    | natRec : Value P0 → Value PS → VarSpine n → VarSpine (.natRec P0 PS n)
+
+  mod_def extends var_spine_not_lam where
+    finally
+      grind only [Term.is_lam]
+
+  mod_def extends progress where
+    finally
+      all_goals (try grind only [Value,Term.is_lam])
+      · rintro a (h | ⟨t',h⟩)
+        · left
+          constructor
+          assumption
+        · right
+          exists t'.succ
+          constructor
+          assumption
+      · rintro P0 PS n (hP0 | ⟨P0',hP0⟩) (hPS | ⟨PS',hPS⟩) (hn | ⟨n',hn⟩)
+        · by_cases h : n.is_nat_lit
+          · unfold Term.is_nat_lit at h
+            split at h
+            · right
+              constructor
+              apply Red.natRecZero
+            · right
+              constructor
+              apply Red.natRecSucc
+            · cases h
+          · left
+            grind only [Value]
+        all_goals (right; constructor ; first
+          | apply Red.natRec1; assumption
+          | apply Red.natRec2; assumption
+          | apply Red.natRec3; assumption)
+
+
+
 
 
 /-DONE
@@ -428,8 +467,8 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
   - Typing
   - Preservation
   - Infer
-  TODO
   - Progress
+  TODO
   - SNi
   - WeakNorm
   - StrongNorm
