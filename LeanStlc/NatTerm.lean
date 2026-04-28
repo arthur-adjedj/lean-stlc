@@ -472,29 +472,29 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
 modular (name := `SNi) (imports := #[`Progress])
 
   inductive SnHeadRed extends SnHeadRed where
-    | natRecZero : SnHeadRed (.natRec P0 PS .zero) P0
+    | natRecZero : SN Red PS → SnHeadRed (.natRec P0 PS .zero) P0
     | natRecSucc : SnHeadRed (.natRec P0 PS (.succ n)) (.app (.app PS n) (.natRec P0 PS n))
-
+    | natRecStep : SnHeadRed n n' -> SnHeadRed (.natRec P0 PS n) (.natRec P0 PS n')
   infix:80 " ~>sn " => SnHeadRed
 
   mod_def extends SnHeadRed.red_compatible where
     finally
       all_goals (try grind only)
-      · intro _ _ _ r
+      · intro _ _ _ _ r
         cases r
         · right
           constructor
           constructor
           · constructor
-            -- assumption
+            assumption
           · exact Star.step1 ‹_›
         · right
           constructor
           constructor
           · constructor
-            -- rename_i s1 _ r
-            -- cases s1 with | sn s1 =>
-            -- exact s1 _ r
+            rename_i s1 _ r
+            cases s1 with | sn s1 =>
+            exact s1 _ r
           · exact Star.refl
         · rename_i r; cases r
         · left; rfl
@@ -519,10 +519,20 @@ modular (name := `SNi) (imports := #[`Progress])
             · exact Red.app2 (Red.natRec3 ‹_›)
             · exact Red.app1 (Red.app2 ‹_›)
         · left; rfl
+      · intro _ _ _ _ snn ihn _ r
+        cases r
+        · exact .inr ⟨_,.natRecStep snn, Star.step1 (Red.natRec1 ‹_›)⟩
+        · exact .inr ⟨_,.natRecStep snn, Star.step1 (Red.natRec2 ‹_›)⟩
+        · cases ihn ‹_› with
+          | inl => left; grind
+          | inr h =>
+           obtain ⟨z, ih1, ih2⟩ := h
+           exact .inr ⟨_, .natRecStep ih1, .congr3_3 _ _ .natRec .natRec3 ih2⟩
+        · cases snn
+        · cases snn
 
-  mod_def extends SN.subterm_app
-
-  theorem SN.subterm_natRec : SN Red (.natRec P0 PS n) -> SN Red P0 ∧ SN Red PS ∧ SN Red n := by
+  namespace SN
+  theorem subterm_natRec : SN Red (.natRec P0 PS n) -> SN Red P0 ∧ SN Red PS ∧ SN Red n := by
     intro h
     generalize e : P0.natRec PS n = t at h
     induction h generalizing P0 PS n <;> cases e
@@ -535,44 +545,152 @@ modular (name := `SNi) (imports := #[`Progress])
     · intro _ r
       exact a_ih _ (Red.natRec3 r) rfl |>.2.2
 
-  mod_def extends SN.lam where
+  mod_def subterm_app extends SN.subterm_app
+  mod_def lam extends SN.lam where
     finally all_goals grind only
 
-  mod_def extends SN.neutral_app where
+  mod_def neutral_app extends SN.neutral_app where
     finally all_goals grind only
 
-  mod_def extends SN.weak_head_expansion where
+  mod_def weak_head_expansion extends SN.weak_head_expansion where
     finally all_goals grind only
 
-  mod_def extends SN.red_app_preservation where
+  mod_def red_app_preservation extends SN.red_app_preservation where
     finally all_goals grind only
 
-  mod_def extends SN.backward_closure where
-    finally all_goals sorry
+  theorem backward_closure_app :
+    SnHeadRed f f' ->
+    SN Red f ->
+    SN Red a ->
+    SN Red (f'.app a) ->
+    SN Red (f.app a)
+  := by
+    intro r1 h1 h2 h3
+    induction h1 generalizing f' a
+    case _ f h1 ih1 =>
+    induction h2
+    case _ a h2 ih2 =>
+    apply SN.sn; intro y r2
+    cases r2
+    case _ => cases r1
+    case _ f'' r =>
+      have lem1 := SnHeadRed.red_compatible r1 r
+      cases lem1
+      case _ lem1 => subst lem1; apply h3
+      case _ lem1 =>
+        cases lem1; case _ z lem1 =>
+        apply ih1 f'' r lem1.1 (SN.sn h2)
+        apply SN.preservation h3
+        apply Star.congr2_1 a Term.app Red.app1 lem1.2
+    case _ a'' r =>
+      apply ih2 a'' r
+      apply SN.preservation h3
+      apply Star.congr2_2 f' Term.app Red.app2 (Star.step Star.refl r)
 
-  -- theorem SN.backward_closure {t' t} : SN Red t' -> t ~>sn t' -> SN Red t := by
-  --   intro h r; induction r
-  --   case beta h2 => apply weak_head_expansion h2 h
-  --   case app r ih =>
-  --     have lem := subterm_app h
-  --     apply red_app_preservation r (ih lem.1) lem.2 h
-  --   case natRecZero sps =>
-  --     induction h generalizing sps with | sn a a_ih =>
-  --     constructor
-  --     intro _ r
-  --     cases r
-  --     · apply a_ih <;>
-  --       assumption
-  --     · sorry
-  --     · sorry
-  --     · sorry
-  --   case natRecSucc => sorry
+  theorem backward_closure_nrec :
+    SnHeadRed n n' ->
+    SN Red z ->
+    SN Red s ->
+    SN Red n ->
+    SN Red (.natRec z s n') ->
+    SN Red (.natRec z s n)
+  := by
+    intro r1 h1 h2 h3 h4
+    induction h3 generalizing z s n'; case _ n hn ihn =>
+    induction h2 generalizing z; case _ s hs ihs =>
+    induction h1; case _ z hz ihz =>
+    apply SN.sn; intro y r2; case _ =>
+    cases r2
+    case natRecZero => cases r1
+    case natRecSucc => cases r1
+    case natRec1 z' r =>
+      apply ihz z' r
+      apply SN.preservation_step h4
+      apply Red.natRec1 r
+    case natRec2 s' r =>
+      apply ihs s' r (SN.sn hz)
+      apply SN.preservation_step h4
+      apply Red.natRec2 r
+    case natRec3 n'' r =>
+      have lem1 := SnHeadRed.red_compatible r1 r
+      cases lem1
+      case _ lem1 => subst lem1; exact h4
+      case _ lem1 =>
+        obtain ⟨w, lem1, lem2⟩ := lem1
+        apply ihn n'' r lem1 (SN.sn hz) (SN.sn hs)
+        apply SN.preservation h4
+        exact Star.congr3_3 _ _ _ Red.natRec3 lem2
+
+  theorem zero_expansion : SN Red s -> SN Red z -> SN Red (.natRec z s .zero) := by
+    intro h1 h2
+    induction h2 generalizing s; case _ z hz ihz =>
+    induction h1; case _ s hs ihs =>
+    apply SN.sn; case _ =>
+    intro y r; cases r
+    case natRecZero => apply SN.sn hz
+    case natRec1 z' r =>
+      apply ihz _ r
+      apply SN.sn hs
+    case natRec2 s' r => apply ihs _ r
+    case natRec3 n' r => cases r
+
+  theorem succ_expansion :
+    SN Red ((s.app n).app (.natRec z s n)) ->
+    SN Red z ->
+    SN Red s ->
+    SN Red n ->
+    SN Red (.natRec z s n.succ)
+  := by
+    intro h j1 j2 j3
+    induction j3 generalizing z s; case _ n j3 ih3 =>
+    induction j2 generalizing z; case _ s j2 ih2 =>
+    induction j1; case _ z j1 ih1 =>
+    apply SN.sn; case _ =>
+    intro y r; cases r
+    case natRecSucc n => exact h
+    case natRec1 z' r =>
+      apply ih1 _ r
+      apply SN.preservation_step h
+      apply Red.app2
+      apply Red.natRec1 r
+    case natRec2 s' r =>
+      apply ih2 _ r
+      apply SN.preservation h
+      apply Star.congr2 Term.app Red.app1 Red.app2
+      apply Star.step .refl (.app1 r)
+      apply Star.step .refl
+      apply Red.natRec2 r
+      apply SN.sn j1
+    case natRec3 n' r =>
+      cases r; case _ n' r =>
+      apply ih3 _ r _ (SN.sn j1) (SN.sn j2)
+      apply SN.preservation h
+      exact Star.step2 (Red.app1 (Red.app2 r)) (Red.app2 (Red.natRec3 r))
+
+  theorem backward_closure {t' t} : SN Red t' -> SnHeadRed t t' -> SN Red t := by
+    intro h r; induction r
+    case beta h2 => apply weak_head_expansion h2 h
+    case app r ih =>
+      have lem := subterm_app h
+      apply backward_closure_app r (ih lem.1) lem.2 h
+    case natRecZero h2 => apply zero_expansion h2 h
+    case natRecSucc =>
+      obtain ⟨h1, h2⟩ := subterm_app h
+      obtain ⟨h3, h4, h5⟩ := subterm_natRec h2
+      apply succ_expansion h h3 h4 h5
+    case natRecStep r ih =>
+      obtain ⟨h1, h2, h3⟩ := subterm_natRec h
+      apply backward_closure_nrec r h1 h2 (ih h3) h
+  end SN
+
+  add_mapping _root_.SN.backward_closure => SN.backward_closure
 
   mod_def extends SnIndices
 
   inductive SNi extends SNi where
     | zero : SNi .nor .zero
     | succ {n} : SNi .nor n → SNi .nor n.succ
+    | natRecNeu : SNi .nor P0 → SNi .nor PS → SNi .neu n → SNi .neu (.natRec P0 PS .zero)
     | natRecZero : SNi .nor PS → SNi .red (.natRec P0 PS .zero, P0)
     | natRecSucc : SNi .red (.natRec P0 PS (.succ n), (PS.app n).app (.natRec P0 PS n))
     | natRecStep : SNi .red (n, n') → SNi .red (.natRec P0 PS n, .natRec P0 PS n')
@@ -587,6 +705,7 @@ modular (name := `SNi) (imports := #[`Progress])
       · rename_i ih _
         apply SNi.succ
         apply ih
+      · sorry
       · rw [SNi.SnRenameLemmaType,subst_natRec]
         constructor
         rename_i ih _
@@ -620,6 +739,7 @@ modular (name := `SNi) (imports := #[`Progress])
   mod_def extends SNi.property_weaken where
     finally
     all_goals simp
+    · sorry
     · intros; constructor
     · intros; constructor
     · intros; apply Red.natRec3; assumption
@@ -641,12 +761,15 @@ modular (name := `SNi) (imports := #[`Progress])
       cases ry
       apply a_ih
       assumption
+    · sorry
+    · intros
+      constructor
+      assumption
     · intros
       constructor
     · intros
       constructor
-    · intros
-      sorry --not solvable, TODO change SNHeadRed
+      assumption
 
   end SNi
 
@@ -667,7 +790,6 @@ modular (name := `StrongNorm) (imports := #[`SNi])
       intro _ r h
       simp [StrongNormalizaton.LR] at *
       apply SNi.rename r h
-
 
   mod_def extends StrongNormalizaton.cr where
     finally all_goals sorry
