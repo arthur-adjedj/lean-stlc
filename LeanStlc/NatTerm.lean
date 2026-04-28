@@ -62,8 +62,7 @@ modular (name := `Term)
     | .zero | .succ _ => True
     | _ => False
 
-  mod_def extends Term.from_action where
-    matcher match_1 with
+  mod_def extends Term.from_action
 
   @[simp] mod_def extends Term.from_action_id
   @[simp] mod_def extends Term.from_action_succ
@@ -72,7 +71,6 @@ modular (name := `Term)
 
   @[simp]
   mod_def extends smap where
-    matcher match_1 with
     matcher match_1 k lf f with
       | .zero => .zero
       | .succ n => .succ (smap k lf f n)
@@ -130,16 +128,6 @@ modular (name := `Term)
   mod_def extends ren_subst_apply_eq_lift
   mod_def extends ren_subst_apply_eq where
     finally all_goals grind
-
-  @[simp]
-  def Term.size : Term → Nat
-    | .var _ => 10
-    | .natRec P0 PS n => (size P0 + size PS + size n) + 10
-    | .zero => 10
-    | .succ n => (size n) + 1
-    | .lam _ f => (size f) + 10
-    | .app f x => (size f + size x) + 10
-  termination_by structural t => t
 
 modular (imports := #[`Term]) (name := `ParRed)
   inductive ParRed extends ParRed where
@@ -412,8 +400,6 @@ modular (name := `Infer) (imports := #[`Typing])
 
   @[simp]
   mod_def extends infer where
-    matcher match_1 with
-
     matcher match_3 Γ with
       | .zero => some .nat
       | .succ n => do
@@ -432,8 +418,7 @@ modular (name := `Infer) (imports := #[`Typing])
 
 modular (name := `Progress) (imports := #[`Red, `Typing])
   @[grind]
-  mod_def Term.is_lam extends _root_.Term.is_lam where
-    matcher match_1 with
+  mod_def Term.is_lam extends _root_.Term.is_lam
 
   inductive Value extends Value where
     | zero : Value .zero
@@ -487,9 +472,8 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
 modular (name := `SNi) (imports := #[`Progress])
 
   inductive SnHeadRed extends SnHeadRed where
-    | natRecZero : SN Red PS -> SnHeadRed (.natRec P0 PS .zero) P0
-    | natRecSucc : SN Red P0 -> SN Red PS -> SN Red n ->
-      SnHeadRed (.natRec P0 PS (.succ n)) (.app (.app PS n) (.natRec P0 PS n))
+    | natRecZero : SnHeadRed (.natRec P0 PS .zero) P0
+    | natRecSucc : SnHeadRed (.natRec P0 PS (.succ n)) (.app (.app PS n) (.natRec P0 PS n))
 
   infix:80 " ~>sn " => SnHeadRed
 
@@ -590,15 +574,13 @@ modular (name := `SNi) (imports := #[`Progress])
     | zero : SNi .nor .zero
     | succ {n} : SNi .nor n → SNi .nor n.succ
     | natRecZero : SNi .nor PS → SNi .red (.natRec P0 PS .zero, P0)
-    | natRecSucc : SNi .nor P0 → SNi .nor PS → SNi .nor n →
-      SNi .red (.natRec P0 PS (.succ n), (PS.app n).app (.natRec P0 PS n))
+    | natRecSucc : SNi .red (.natRec P0 PS (.succ n), (PS.app n).app (.natRec P0 PS n))
     | natRecStep : SNi .red (n, n') → SNi .red (.natRec P0 PS n, .natRec P0 PS n')
 
   namespace SNi
-  mod_def extends SNi.SnRenameLemmaType where
-    matcher match_1 with
+  mod_def extends SNi.SnRenameLemmaType
 
-  mod_def extends SNi.rename where
+  mod_def rename extends SNi.rename where
     finally
       all_goals intros
       · exact SNi.zero
@@ -607,6 +589,8 @@ modular (name := `SNi) (imports := #[`Progress])
         apply ih
       · rw [SNi.SnRenameLemmaType,subst_natRec]
         constructor
+        rename_i ih _
+        apply ih
       · rw [SNi.SnRenameLemmaType,subst_natRec]
         constructor
       · rw [SNi.SnRenameLemmaType,subst_natRec,subst_natRec]
@@ -614,8 +598,7 @@ modular (name := `SNi) (imports := #[`Progress])
         rename_i ih _
         apply ih
 
-  mod_def extends SNi.SnAntiRenameLemmaType where
-    matcher match_1 with
+  mod_def extends SNi.SnAntiRenameLemmaType
 
   mod_def extends SNi.antirename where
     finally
@@ -625,16 +608,14 @@ modular (name := `SNi) (imports := #[`Progress])
       try grind
     all_goals sorry
 
-  mod_def extends SNi.SnBetaVarLemmaType where
-    matcher match_1 with
+  mod_def extends SNi.SnBetaVarLemmaType
 
   mod_def extends SNi.beta_var where
     finally
       all_goals try grind (splits := 0) only [SNi.SnBetaVarLemmaType]
 
   @[simp]
-  mod_def extends SNi.SnPropertyWeakenLemmaType where
-    matcher match_1 with
+  mod_def extends SNi.SnPropertyWeakenLemmaType
 
   mod_def extends SNi.property_weaken where
     finally
@@ -643,8 +624,7 @@ modular (name := `SNi) (imports := #[`Progress])
     · intros; constructor
     · intros; apply Red.natRec3; assumption
 
-  mod_def extends SNi.SnSoundLemmaType where
-    matcher match_1 with
+  mod_def extends SNi.SnSoundLemmaType
 
   mod_def extends SNi.sound where
     finally
@@ -676,15 +656,18 @@ modular (name := `StrongNorm) (imports := #[`SNi])
     matcher match_1 with
       | .nat => SNi .nor
 
-  mod_def extends StrongNormalizaton.GR where
-    matcher match_1 with
+  mod_def extends StrongNormalizaton.GR
 
   mod_def SemanticTyping extends StrongNormalizaton.SemanticTyping
 
   notation:170 Γ:170 " ⊨s " t:170 " : " A:170 => SemanticTyping Γ t A
 
   mod_def extends StrongNormalizaton.monotone where
-    finally sorry
+    finally
+      intro _ r h
+      simp [StrongNormalizaton.LR] at *
+      apply SNi.rename r h
+
 
   mod_def extends StrongNormalizaton.cr where
     finally all_goals sorry
