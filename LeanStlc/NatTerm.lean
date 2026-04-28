@@ -16,6 +16,9 @@ open LeanSubst
 namespace LeanSubst.Star
   @[grind .]
   theorem step1 {R : α → α → Prop} : R x y → LeanSubst.Star R x y := (.step .refl ·)
+  theorem step2 {R : α → α → Prop} : R x y → R y z → LeanSubst.Star R x z :=
+  fun h₁ h₂ =>
+  (.step (.step .refl h₁) h₂)
 end LeanSubst.Star
 namespace NatExt
 
@@ -67,6 +70,7 @@ modular (name := `Term)
   @[simp] mod_def extends Term.from_acton_re
   mod_def extends Term.from_action_su
 
+  @[simp]
   mod_def extends smap where
     matcher match_1 with
     matcher match_1 k lf f with
@@ -112,27 +116,20 @@ modular (name := `Term)
         next ih_1 ih_2 ih_3 _ =>
           simp [LeanSubst.SubstMap.smap, smap, *] at *
           grind
-
+  @[instance]
   mod_def extends SubstMapStable_Term
+
   @[simp]
   mod_def extends apply_compose where
-    finally
-      all_goals
-        intros
-        simp [*] at *
+    finally all_goals grind
 
+  @[instance]
   mod_def extends SubstMapCompose_Term
-
-  -- inductive Neutral extends Neutral where
-    -- | const : Neutral (.const n)
 
   mod_def extends to_ren_is_var
   mod_def extends ren_subst_apply_eq_lift
   mod_def extends ren_subst_apply_eq where
-    finally
-      all_goals
-        intros
-        simp [*] at * <;> grind
+    finally all_goals grind
 
   @[simp]
   def Term.size : Term → Nat
@@ -187,6 +184,7 @@ modular (imports := #[`Term]) (name := `ParRed)
 
   @[grind .]
   mod_def subst_red_lift extends ParRed.subst_red_lift
+
   theorem hsubst {t t' : Term} {σ σ' : LeanSubst.Subst Term} :
     (∀ x, ActionRed ParRed (σ x) (σ' x)) ->
     ParRed t t' ->
@@ -196,19 +194,18 @@ modular (imports := #[`Term]) (name := `ParRed)
     induction t2 generalizing σ σ' <;> try grind (splits := 3)
     case var =>
       simp only [subst_var, Term.from_action]
-      repeat split <;> try grind [ActionRed]
+      grind [ActionRed]
     case beta A b b' a a' r1 r2 ih1 ih2 =>
-      have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ'])
-      simp only [apply_compose, subst_app, subst_lam, Subst.rewrite3_replace,
-        Subst.rewrite2] at *
-      sorry
+      have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ']) (ih1 (subst_red_lift h1)) (ih2 h1)
+      simp [Subst.rewrite_lift] at *
+      exact lem1
     case app  =>
       simp only [subst_app]
       apply ParRed.app <;> grind only [= subst_zero]
     case lam ih =>
       simp only [subst_lam]
       apply ParRed.lam
-      sorry
+      exact ih (subst_red_lift h1)
     case natRec =>
       simp only [subst_natRec]
       apply ParRed.natRec <;> grind only
@@ -217,7 +214,7 @@ modular (imports := #[`Term]) (name := `ParRed)
       apply ParRed.natRecSucc <;> grind only
   add_mapping _root_.ParRed.hsubst => ParRed.hsubst
 
-    @[simp, grind]
+  @[simp, grind]
   mod_def complete extends ParRed.complete where
     matcher match_1 with
       | .zero => .zero
@@ -489,13 +486,71 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
 
 modular (name := `SNi) (imports := #[`Progress])
 
-  inductive SnHeadRed extends SnHeadRed where --TODO add missing natRec constructor
+  inductive SnHeadRed extends SnHeadRed where
+    | natRecZero : SN Red PS -> SnHeadRed (.natRec P0 PS .zero) P0
+    | natRecSucc : SN Red P0 -> SN Red PS -> SN Red n ->
+      SnHeadRed (.natRec P0 PS (.succ n)) (.app (.app PS n) (.natRec P0 PS n))
+
   infix:80 " ~>sn " => SnHeadRed
 
   mod_def extends SnHeadRed.red_compatible where
-    finally all_goals grind only
+    finally
+      all_goals (try grind only)
+      · intro _ _ _ r
+        cases r
+        · right
+          constructor
+          constructor
+          · constructor
+            -- assumption
+          · exact Star.step1 ‹_›
+        · right
+          constructor
+          constructor
+          · constructor
+            -- rename_i s1 _ r
+            -- cases s1 with | sn s1 =>
+            -- exact s1 _ r
+          · exact Star.refl
+        · rename_i r; cases r
+        · left; rfl
+      · intros _ _ _ _ r
+        cases r
+        · right
+          constructor
+          constructor
+          · constructor
+          · exact Star.step1 (Red.app2 (Red.natRec1 ‹_›))
+        · right
+          constructor
+          constructor
+          · constructor
+          · apply Star.step2
+            · exact (Red.app1 (Red.app1 ‹_›))
+            · exact (Red.app2 (Red.natRec2 ‹_›))
+        · rename_i r; cases r
+          right; constructor; constructor
+          · constructor
+          · apply Star.step2
+            · exact Red.app2 (Red.natRec3 ‹_›)
+            · exact Red.app1 (Red.app2 ‹_›)
+        · left; rfl
 
   mod_def extends SN.subterm_app
+
+  theorem SN.subterm_natRec : SN Red (.natRec P0 PS n) -> SN Red P0 ∧ SN Red PS ∧ SN Red n := by
+    intro h
+    generalize e : P0.natRec PS n = t at h
+    induction h generalizing P0 PS n <;> cases e
+    rename_i a a_ih
+    refine ⟨?_,?_,?_⟩ <;> constructor
+    · intro _ r
+      exact a_ih _ (Red.natRec1 r) rfl |>.1
+    · intro _ r
+      exact a_ih _ (Red.natRec2 r) rfl |>.2.1
+    · intro _ r
+      exact a_ih _ (Red.natRec3 r) rfl |>.2.2
+
   mod_def extends SN.lam where
     finally all_goals grind only
 
@@ -508,39 +563,110 @@ modular (name := `SNi) (imports := #[`Progress])
   mod_def extends SN.red_app_preservation where
     finally all_goals grind only
 
-  mod_def extends SN.backward_closure
+  mod_def extends SN.backward_closure where
+    finally all_goals sorry
+
+  -- theorem SN.backward_closure {t' t} : SN Red t' -> t ~>sn t' -> SN Red t := by
+  --   intro h r; induction r
+  --   case beta h2 => apply weak_head_expansion h2 h
+  --   case app r ih =>
+  --     have lem := subterm_app h
+  --     apply red_app_preservation r (ih lem.1) lem.2 h
+  --   case natRecZero sps =>
+  --     induction h generalizing sps with | sn a a_ih =>
+  --     constructor
+  --     intro _ r
+  --     cases r
+  --     · apply a_ih <;>
+  --       assumption
+  --     · sorry
+  --     · sorry
+  --     · sorry
+  --   case natRecSucc => sorry
 
   mod_def extends SnIndices
 
-  inductive SNi extends SNi where --TODO add missing constructors
+  inductive SNi extends SNi where
+    | zero : SNi .nor .zero
+    | succ {n} : SNi .nor n → SNi .nor n.succ
+    | natRecZero : SNi .nor PS → SNi .red (.natRec P0 PS .zero, P0)
+    | natRecSucc : SNi .nor P0 → SNi .nor PS → SNi .nor n →
+      SNi .red (.natRec P0 PS (.succ n), (PS.app n).app (.natRec P0 PS n))
+    | natRecStep : SNi .red (n, n') → SNi .red (.natRec P0 PS n, .natRec P0 PS n')
 
   namespace SNi
   mod_def extends SNi.SnRenameLemmaType where
     matcher match_1 with
 
-  mod_def extends SNi.rename
+  mod_def extends SNi.rename where
+    finally
+      all_goals intros
+      · exact SNi.zero
+      · rename_i ih _
+        apply SNi.succ
+        apply ih
+      · rw [SNi.SnRenameLemmaType,subst_natRec]
+        constructor
+      · rw [SNi.SnRenameLemmaType,subst_natRec]
+        constructor
+      · rw [SNi.SnRenameLemmaType,subst_natRec,subst_natRec]
+        constructor
+        rename_i ih _
+        apply ih
 
   mod_def extends SNi.SnAntiRenameLemmaType where
     matcher match_1 with
 
   mod_def extends SNi.antirename where
-    finally all_goals sorry
+    finally
+    all_goals
+      repeat intro
+      subst_vars
+      try grind
+    all_goals sorry
 
   mod_def extends SNi.SnBetaVarLemmaType where
     matcher match_1 with
 
   mod_def extends SNi.beta_var where
-    finally all_goals sorry
+    finally
+      all_goals try grind (splits := 0) only [SNi.SnBetaVarLemmaType]
 
+  @[simp]
   mod_def extends SNi.SnPropertyWeakenLemmaType where
     matcher match_1 with
 
-  mod_def extends SNi.property_weaken
+  mod_def extends SNi.property_weaken where
+    finally
+    all_goals simp
+    · intros; constructor
+    · intros; constructor
+    · intros; apply Red.natRec3; assumption
+
   mod_def extends SNi.SnSoundLemmaType where
     matcher match_1 with
 
   mod_def extends SNi.sound where
-    finally all_goals sorry
+    finally
+    all_goals try grind (splits := 0) only
+    all_goals dsimp only [SNi.SnSoundLemmaType]
+    · constructor
+      intro _ r
+      cases r
+    · intro _ b r1
+      clear b
+      induction r1 with | sn a a_ih =>
+      constructor
+      intro y ry
+      cases ry
+      apply a_ih
+      assumption
+    · intros
+      constructor
+    · intros
+      constructor
+    · intros
+      sorry --not solvable, TODO change SNHeadRed
 
   end SNi
 
@@ -566,7 +692,18 @@ modular (name := `StrongNorm) (imports := #[`SNi])
   mod_def extends StrongNormalizaton.var
 
   mod_def extends StrongNormalizaton.fundamental where
-    finally all_goals sorry
+    finally
+      all_goals intros; intro x h
+      · rw [subst_zero,StrongNormalizaton.LR]; exact .zero
+      · rw [subst_succ,StrongNormalizaton.LR];
+        apply SNi.succ
+        rename_i ih
+        apply ih _ h
+      · rw [subst_natRec,StrongNormalizaton.LR.eq_def]
+        split
+        · sorry
+        · sorry
+        · sorry
 
   end StrongNormalizaton
 
