@@ -43,6 +43,9 @@ modular (name := `Term)
     -- Nat.rec P0     PS     n
     | natRec : Term → Term → Term → Term
 
+  inductive Neutral extends Neutral where
+    | natRec : Neutral n → Neutral (.natRec P0 PS n)
+
   mod_def extends Term.repr where
     matcher match_1 x y z with
       | .zero => "O"
@@ -310,10 +313,7 @@ modular (name := `Red) (imports := #[`ParRed])
 
   mod_def extends Red.instHasConfluenceTerm
 
-  inductive Neutral extends Neutral where
-    | natRec : Neutral n → Neutral (.natRec P0 PS n)
-
-  mod_def extends Red.preservation_of_neutral_step where
+  mod_def preservation_of_neutral_step extends Red.preservation_of_neutral_step where
     finally
       all_goals try grind only
       · intro _ _ _ h1 ih _ r
@@ -324,7 +324,7 @@ modular (name := `Red) (imports := #[`ParRed])
             apply ih
             assumption
 
-  mod_def extends Red.preservation_of_neutral
+  mod_def preservation_of_neutral extends Red.preservation_of_neutral
 
   end Red
 
@@ -552,6 +552,27 @@ modular (name := `SNi) (imports := #[`Progress])
   mod_def neutral_app extends SN.neutral_app where
     finally all_goals grind only
 
+  theorem neutral_nrec :
+    Neutral n ->
+    SN Red z ->
+    SN Red s ->
+    SN Red n ->
+    SN Red (Term.natRec z s n)
+  := by
+    intro nh j1 j2 j3
+    induction j3 generalizing z s; case _ n h1 ih1 =>
+    induction j2 generalizing z; case _ s h2 ih2 =>
+    induction j1; case _ z h3 ih3 =>
+    apply SN.sn; case _ =>
+    intro y r; cases r
+    case natRecZero => cases nh
+    case natRecSucc => cases nh
+    case natRec1 z' r => apply ih3 _ r
+    case natRec2 s' r => apply ih2 _ r (.sn h3)
+    case natRec3 n' r =>
+      apply ih1 _ r _ (.sn h3) (.sn h2)
+      apply Red.preservation_of_neutral_step nh r
+
   mod_def weak_head_expansion extends SN.weak_head_expansion where
     finally all_goals grind only
 
@@ -690,7 +711,7 @@ modular (name := `SNi) (imports := #[`Progress])
   inductive SNi extends SNi where
     | zero : SNi .nor .zero
     | succ {n} : SNi .nor n → SNi .nor n.succ
-    | natRecNeu : SNi .nor P0 → SNi .nor PS → SNi .neu n → SNi .neu (.natRec P0 PS .zero)
+    | natRecNeu : SNi .nor P0 → SNi .nor PS → SNi .neu (.natRec P0 PS .zero)
     | natRecZero : SNi .nor PS → SNi .red (.natRec P0 PS .zero, P0)
     | natRecSucc : SNi .red (.natRec P0 PS (.succ n), (PS.app n).app (.natRec P0 PS n))
     | natRecStep : SNi .red (n, n') → SNi .red (.natRec P0 PS n, .natRec P0 PS n')
@@ -705,7 +726,8 @@ modular (name := `SNi) (imports := #[`Progress])
       · rename_i ih _
         apply SNi.succ
         apply ih
-      · sorry
+      · simp only [SNi.SnRenameLemmaType,SnIndices,subst_natRec,subst_zero] at *
+        constructor <;> grind only
       · rw [SNi.SnRenameLemmaType,subst_natRec]
         constructor
         rename_i ih _
@@ -761,15 +783,16 @@ modular (name := `SNi) (imports := #[`Progress])
       cases ry
       apply a_ih
       assumption
-    · sorry
+    · intros
+      apply SN.zero_expansion <;>
+      assumption
     · intros
       constructor
       assumption
     · intros
       constructor
     · intros
-      constructor
-      assumption
+      solve_by_elim
 
   end SNi
 
@@ -821,8 +844,8 @@ modular (name := `StrongNorm) (imports := #[`SNi])
   - Preservation
   - Infer
   - Progress
-  TODO
   - SNi
+  TODO
   - WeakNorm
   - StrongNorm
 -/
