@@ -374,7 +374,7 @@ modular (name := `Typing) (imports := #[`Term])
       all_goals grind only
 
 modular (name := `Preservation) (imports := #[`Red, `Typing])
-  mod_def extends preservation_step where
+  mod_def preservation_step extends preservation_step where
     finally
       all_goals (try grind (splits := 1) only) <;> intros
       · grind only [Red,Typing]
@@ -706,6 +706,7 @@ modular (name := `SNi) (imports := #[`Progress])
 
   add_mapping _root_.SN.backward_closure => SN.backward_closure
 
+  @[reducible]
   mod_def extends SnIndices
 
   inductive SNi extends SNi where
@@ -726,7 +727,7 @@ modular (name := `SNi) (imports := #[`Progress])
       · rename_i ih _
         apply SNi.succ
         apply ih
-      · simp only [SNi.SnRenameLemmaType,SnIndices,subst_natRec] at *
+      · simp only [SNi.SnRenameLemmaType,subst_natRec] at *
         constructor <;> grind only
       · rw [SNi.SnRenameLemmaType,subst_natRec]
         constructor
@@ -747,14 +748,14 @@ modular (name := `SNi) (imports := #[`Progress])
       repeat intro
       try grind
     · rename_i z e
-      cases z <;> simp only [SnIndices,subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
       exact SNi.zero
     · rename_i a a_ih _ z e
-      cases z <;> simp only [SnIndices,subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
       apply SNi.succ
       apply a_ih _ _ rfl
     · rename_i P0_ih PS_ih n_ih  _ z e
-      cases z <;> simp only [SnIndices,subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
       apply SNi.natRecNeu
       · apply P0_ih _ _ rfl
       · apply PS_ih _ _ rfl
@@ -791,7 +792,7 @@ modular (name := `SNi) (imports := #[`Progress])
   @[simp]
   mod_def extends SNi.SnPropertyWeakenLemmaType
 
-  mod_def extends SNi.property_weaken where
+  mod_def property_weaken extends SNi.property_weaken where
     finally
     all_goals simp
     · intros; constructor; assumption
@@ -832,25 +833,31 @@ modular (name := `SNi) (imports := #[`Progress])
 
 modular (name := `StrongNorm) (imports := #[`SNi])
   namespace StrongNormalizaton
-  mod_def extends StrongNormalizaton.LR where
+  mod_def LR extends StrongNormalizaton.LR where
     matcher match_1 with
       | .nat => SNi .nor
 
-  mod_def extends StrongNormalizaton.GR
+  -- mod_def GR extends StrongNormalizaton.GR
 
+  @[simp]
+  def GR : List Ty -> (Subst Term -> Prop)
+  | Γ, σ => ∀ x T, Γ[x]? = .some T -> Γ ⊢ (Subst.apply σ #x) : T ∧ LR T (Subst.apply σ #x)
+
+  add_mapping _root_.StrongNormalizaton.GR => GR
+  @[simp]
   mod_def SemanticTyping extends StrongNormalizaton.SemanticTyping
 
   notation:170 Γ:170 " ⊨s " t:170 " : " A:170 => SemanticTyping Γ t A
 
-  mod_def extends StrongNormalizaton.monotone where
+  mod_def monotone extends StrongNormalizaton.monotone where
     finally
       intro _ r h
-      simp [StrongNormalizaton.LR] at *
+      simp [LR] at *
       apply SNi.rename r h
 
-  mod_def extends StrongNormalizaton.cr where
+  mod_def cr extends StrongNormalizaton.cr where
     finally
-      dsimp only [StrongNormalizaton.LR]
+      dsimp only [LR]
       refine ⟨fun _ h => h,?_,?_⟩
       · intro t h
         constructor
@@ -860,19 +867,82 @@ modular (name := `StrongNorm) (imports := #[`SNi])
 
   mod_def extends StrongNormalizaton.var
 
-  mod_def extends StrongNormalizaton.fundamental where
-    finally
-      all_goals intros; intro x h
+  theorem LR.nrec_neutral
+    (h1 : LR A z)
+    (h2 : LR (.nat -t> A -t> A) s)
+    (h3 : SNi .neu n)
+    : LR A (.natRec z s n)
+  := cr.2.1 _ (SNi.natRecNeu (cr.1 _ h1) (cr.1 _ h2) h3)
+
+  theorem LR.app (flr : LR (A -t> B) f) (alr : LR A a) : LR B (f :@ a) :=
+      cast (by simp) (flr id _ alr)
+
+  def LR.nrec' (h1 : LR A z) (h2 : LR (.nat -t> A -t> A) s)
+      : (t : SNi v n) → (e : v = .nor) →
+      let n' :  SnIndices .nor := e ▸ n;
+      (j : Γ ⊢ n' : Ty.nat) → LR A (.natRec z s n')
+    | .lam t, rfl,j => by cases j
+    | .zero, rfl,j =>
+      cr.2.2 _ _ (SNi.natRecZero (cr.1 _ h2)) h1
+    | .succ t', rfl,j =>
+      let .succ j := j
+      cr.2.2 _ _ SNi.natRecSucc (LR.app (LR.app h2 t') (nrec' h1 h2 t' rfl j))
+    | .neu t, rfl,j => nrec_neutral h1 h2 t
+    | .red r t', rfl,j =>
+      let r' := SNi.property_weaken r
+      cr.2.2 _ _ (SNi.natRecStep r) (nrec' h1 h2 t' rfl (preservation_step j r'))
+    termination_by structural t => t
+
+  def LR.nrec (h1 : LR A z) (h2 : LR (.nat -t> A -t> A) s) (t : SNi .nor n) (j : Γ ⊢ n : Ty.nat) : LR A (.natRec z s n) := LR.nrec' h1 h2 t rfl j
+
+  theorem fundamental {Γ A} {t : Term} : Γ ⊢ t : A -> SemanticTyping Γ t A := by
+    intro j; induction j
+    case var Γ T x j =>
+      simp; intro σ h
+      apply h x T j |>.2
+    case app Γ A B f a j1 j2 ih1 ih2 =>
+      simp; intro σ h; simp at ih1
+      replace ih1 := ih1 σ h id (a[σ])
+      simp at ih1; apply ih1
+      apply ih2 σ h
+    case lam Γ A B t j ih =>
+      simp; intro σ h r v lv
+      have lem : t[.re 0::σ ∘ r ∘ +1][.su v :: +0] = t[.su v::σ ∘ r.to] := by simp
+      apply cr.2.2 _ (t[.su v::σ ∘ r.to])
+      have lem2 := @SNi.beta v A (t[.re 0::σ ∘ r ∘ +1]); simp at lem2 ⊢
+      apply lem2
+      apply cr.1 _ lv
+      obtain ⟨ih₁,ih⟩ := ih (.su v :: σ ∘ r.to)
+      apply ih
+      simp; intro x T j2
+      cases x
+      case _ =>
+        simp; simp at j2; subst j2
+        constructor
+        · sorry
+        · apply lv
+      case _ x =>
+        simp; simp at j2
+        specialize h x T j2
+        unfold Subst.compose; simp
+        generalize zdef : σ x = z at *
+        cases z <;> simp at *
+        case _ k =>
+          have lem := monotone r h.2; simp at lem
+          generalize wdef : r k = w at *
+          constructor
+          · sorry
+          · cases w <;> simp [*]
+        case _ t => apply monotone r h.2
+      all_goals intros; intro σ h
       · rw [subst_zero,StrongNormalizaton.LR]; exact .zero
       · rw [subst_succ,StrongNormalizaton.LR];
         apply SNi.succ
         rename_i ih
         apply ih _ h
-      · rw [subst_natRec,StrongNormalizaton.LR.eq_def]
-        split
-        · sorry
-        · sorry
-        · sorry
+      · rw [subst_natRec]
+        simp [SemanticTyping] at *
+        apply LR.nrec <;> try solve_by_elim
 
   end StrongNormalizaton
 
