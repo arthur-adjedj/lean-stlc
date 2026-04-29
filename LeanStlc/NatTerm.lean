@@ -711,7 +711,7 @@ modular (name := `SNi) (imports := #[`Progress])
   inductive SNi extends SNi where
     | zero : SNi .nor .zero
     | succ {n} : SNi .nor n → SNi .nor n.succ
-    | natRecNeu : SNi .nor P0 → SNi .nor PS → SNi .neu (.natRec P0 PS .zero)
+    | natRecNeu : SNi .nor P0 → SNi .nor PS → SNi .neu n → SNi .neu (.natRec P0 PS n)
     | natRecZero : SNi .nor PS → SNi .red (.natRec P0 PS .zero, P0)
     | natRecSucc : SNi .red (.natRec P0 PS (.succ n), (PS.app n).app (.natRec P0 PS n))
     | natRecStep : SNi .red (n, n') → SNi .red (.natRec P0 PS n, .natRec P0 PS n')
@@ -726,7 +726,7 @@ modular (name := `SNi) (imports := #[`Progress])
       · rename_i ih _
         apply SNi.succ
         apply ih
-      · simp only [SNi.SnRenameLemmaType,SnIndices,subst_natRec,subst_zero] at *
+      · simp only [SNi.SnRenameLemmaType,SnIndices,subst_natRec] at *
         constructor <;> grind only
       · rw [SNi.SnRenameLemmaType,subst_natRec]
         constructor
@@ -745,9 +745,42 @@ modular (name := `SNi) (imports := #[`Progress])
     finally
     all_goals
       repeat intro
-      subst_vars
       try grind
-    all_goals sorry
+    · rename_i z e
+      cases z <;> simp only [SnIndices,subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      exact SNi.zero
+    · rename_i a a_ih _ z e
+      cases z <;> simp only [SnIndices,subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      apply SNi.succ
+      apply a_ih _ _ rfl
+    · rename_i P0_ih PS_ih n_ih  _ z e
+      cases z <;> simp only [SnIndices,subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      apply SNi.natRecNeu
+      · apply P0_ih _ _ rfl
+      · apply PS_ih _ _ rfl
+      · apply n_ih _ _ rfl
+    · rename_i P0_ih PS_ih _ z e
+      cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      rename_i n
+      cases n <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> cases e
+      refine ⟨_, rfl, ?_⟩
+      apply natRecZero
+      apply PS_ih _ _ rfl
+    · rename_i P0_ih PS_ih r z e
+      cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
+      rename_i P0 PS n
+      cases n <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> cases e
+      rename_i n
+      refine ⟨(PS.app n).app (P0.natRec PS n), by simp, ?_⟩
+      apply natRecSucc
+    · rename_i snn n_ih r z e
+      cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> cases e
+      rename_i n P0 PS k
+      have ⟨w,e,_⟩ := n_ih r _ rfl
+      cases e
+      refine ⟨.natRec P0 PS w, by simp, ?_⟩
+      apply natRecStep
+      assumption
 
   mod_def extends SNi.SnBetaVarLemmaType
 
@@ -761,7 +794,7 @@ modular (name := `SNi) (imports := #[`Progress])
   mod_def extends SNi.property_weaken where
     finally
     all_goals simp
-    · sorry
+    · intros; constructor; assumption
     · intros; constructor
     · intros; constructor
     · intros; apply Red.natRec3; assumption
@@ -777,14 +810,15 @@ modular (name := `SNi) (imports := #[`Progress])
       cases r
     · intro _ b r1
       clear b
-      induction r1 with | sn a a_ih =>
+      induction r1 with | sn _ a_ih =>
       constructor
       intro y ry
       cases ry
       apply a_ih
       assumption
     · intros
-      apply SN.zero_expansion <;>
+      apply SN.neutral_nrec <;> try assumption
+      apply SNi.property_weaken (v := .neu)
       assumption
     · intros
       constructor
@@ -815,7 +849,14 @@ modular (name := `StrongNorm) (imports := #[`SNi])
       apply SNi.rename r h
 
   mod_def extends StrongNormalizaton.cr where
-    finally all_goals sorry
+    finally
+      dsimp only [StrongNormalizaton.LR]
+      refine ⟨fun _ h => h,?_,?_⟩
+      · intro t h
+        constructor
+        assumption
+      · intro t t' h1 h2
+        apply SNi.red <;> assumption
 
   mod_def extends StrongNormalizaton.var
 
