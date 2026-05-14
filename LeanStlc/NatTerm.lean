@@ -46,7 +46,7 @@ modular (name := `Term)
   inductive Neutral extends Neutral where
     | natRec : Neutral n → Neutral (.natRec P0 PS n)
 
-  mod_def extends Term.repr where
+  mod_def Term.repr extends _root_.Term.repr where
     matcher match_1 x y z with
       | .zero => "O"
       | Term.succ n => s!"S ({Term.repr n y})"
@@ -188,7 +188,7 @@ modular (imports := #[`Term]) (name := `ParRed)
     intros h1 t2
     induction t2 generalizing σ σ' <;> try grind (splits := 3)
     case var =>
-      simp only [subst_var, Term.from_action]
+      simp only [subst_var]
       grind [ActionRed]
     case beta A b b' a a' r1 r2 ih1 ih2 =>
       have lem1 := @ParRed.beta A (b[σ.lift]) (b'[σ'.lift]) (a[σ]) (a'[σ']) (ih1 (subst_red_lift h1)) (ih2 h1)
@@ -481,7 +481,7 @@ modular (name := `SNi) (imports := #[`Progress])
     | natRecStep : SnHeadRed n n' -> SnHeadRed (.natRec P0 PS n) (.natRec P0 PS n')
   infix:80 " ~>sn " => SnHeadRed
 
-  mod_def extends SnHeadRed.red_compatible where
+  mod_def red_compatible extends SnHeadRed.red_compatible where
     finally
       all_goals (try grind only)
       · intro _ _ _ _ r
@@ -599,7 +599,7 @@ modular (name := `SNi) (imports := #[`Progress])
     cases r2
     case _ => cases r1
     case _ f'' r =>
-      have lem1 := SnHeadRed.red_compatible r1 r
+      have lem1 := red_compatible r1 r
       cases lem1
       case _ lem1 => subst lem1; apply h3
       case _ lem1 =>
@@ -637,7 +637,7 @@ modular (name := `SNi) (imports := #[`Progress])
       apply SN.preservation_step h4
       apply Red.natRec2 r
     case natRec3 n'' r =>
-      have lem1 := SnHeadRed.red_compatible r1 r
+      have lem1 := red_compatible r1 r
       cases lem1
       case _ lem1 => subst lem1; exact h4
       case _ lem1 =>
