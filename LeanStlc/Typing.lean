@@ -46,15 +46,15 @@ theorem typing_weaken {Γ t A} Δ (r : Ren) :
     apply h _ _
     apply Typing.var j
   case app j1 j2 ih1 ih2 =>
+    rw [ren_app]
     apply Typing.app
-    replace ih1 := ih1 _ _ h; simp at ih1
-    apply ih1
-    replace ih2 := ih2 _ _ h; simp at ih2
-    apply ih2
+    replace ih1 := ih1 _ _ h; assumption
+    replace ih2 := ih2 _ _ h; assumption
   case lam j ih =>
-    apply Typing.lam
-    replace ih := ih _ _ (typing_renaming_lift _ h); simp at ih
-    apply ih
+    rw [ren_lam]
+    constructor
+    replace ih := ih _ _ (typing_renaming_lift _ h); assumption
+
 
 theorem typing_subst_lift {Γ Δ} A {σ : Subst Term} :
   (∀ x T, Γ ⊢ #x : T -> Δ ⊢ σ x : T) ->
@@ -67,10 +67,10 @@ theorem typing_subst_lift {Γ Δ} A {σ : Subst Term} :
   case _ x =>
     have h' := h _ _ (Typing.var j)
     have lem := typing_weaken (A :: Δ) (λ x => x + 1) h' (by {
-      intro x T j2; simp
+      intro x T j2
       apply Typing.var; simp
       cases j2; simp [*]
-    }); simp at lem
+    });
     unfold Subst.compose; simp
     generalize zdef : σ x = z at *
     cases z <;> simp at *

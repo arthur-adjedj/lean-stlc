@@ -134,7 +134,7 @@ namespace ParRed
       simp at lem; apply lem
 
   theorem triangle {t s} : t ~p> s -> s ~p> complete t := by
-    intro r; induction r <;> simp at *
+    intro r; induction r <;> try simp [complete]
     case var => apply ParRed.refl
     case beta ih1 ih2 =>
       apply hsubst

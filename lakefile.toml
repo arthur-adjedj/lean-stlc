@@ -4,9 +4,9 @@ defaultTargets = ["lean-stlc"]
 
 [[require]]
 name = "lean-subst"
-scope = "amarmaduke"
-git = "https://github.com/amarmaduke/lean-subst"
-rev = "main"
+scope = "arthur-adjedj"
+git = "https://github.com/arthur-adjedj/lean-subst"
+rev = "4.32.0-rc1"
 
 [[require]]
 name = "aesop"

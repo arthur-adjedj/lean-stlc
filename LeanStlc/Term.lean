@@ -93,6 +93,12 @@ theorem Term.from_action_compose {x} {σ τ : Subst Term}
   generalize zdef : σ x = z
   cases z <;> simp [Term.from_action]
 
+@[simp]
+theorem ren_app {r : Ren} : r.apply (t1 :@ t2) = (r.apply t1) :@ r.apply t2 := rfl
+
+@[simp]
+theorem ren_lam {A t} {r : Ren} : r.apply (:λ[A] t) = :λ[A] (r.lift.apply t) := rfl
+
 theorem apply_id {t : Term} : t[+0] = t := by
   induction t
   all_goals (simp at * <;> try simp [*])

@@ -30,12 +30,12 @@ modular (name := `Term)
   notation "⊤" => Ty.base
   infixr:40 " -t> " => Ty.arrow
 
-  mod def extends Ty.repr where
+  mod def Ty.repr extends Ty.repr where
     matcher match_1 with
       | .nat => "ℕ"
 
   @[implicit_reducible,instance] -- TODO infer reducibility/instance attribute from what it extends
-  mod def extends instReprTy
+  mod def instReprTy extends instReprTy
 
   inductive Term extends Term where
     | zero : Term
@@ -49,11 +49,11 @@ modular (name := `Term)
   mod def Term.repr extends _root_.Term.repr where
     matcher match_1 x y z with
       | .zero => "O"
-      | Term.succ n => s!"S ({Term.repr n y})"
-      | .natRec P0 PS n => s!"rec ({Term.repr P0 y}) ({Term.repr PS y}) ({Term.repr n y})"
+      | Term.succ n => s!"S ({Term.repr n p})"
+      | .natRec P0 PS n => s!"rec ({Term.repr P0 p}) ({Term.repr PS p}) ({Term.repr n p})"
 
   @[implicit_reducible,instance] -- TODO infer reducibility attribute from what it extends
-  mod def extends instReprTerm
+  mod def instReprTerm extends instReprTerm
 
   prefix:max "#" => Term.var
   infixl:max " :@ " => Term.app
@@ -66,32 +66,32 @@ modular (name := `Term)
     | _ => False
 
   @[coe, grind]
-  mod def extends Term.from_action
+  mod def Term.from_action extends Term.from_action
 
   @[implicit_reducible,instance]
-  mod def extends instCoe_SubstActionTerm_Term
+  mod def instCoe_SubstActionTerm_Term extends instCoe_SubstActionTerm_Term
 
-  @[simp] mod def extends Term.from_action_id
-  @[simp] mod def extends Term.from_action_succ
-  @[simp] mod def extends Term.from_acton_re
-  mod def extends Term.from_action_su
+  @[simp] mod def Term.from_action_id extends Term.from_action_id
+  @[simp] mod def Term.from_action_succ extends Term.from_action_succ
+  @[simp] mod def Term.from_acton_re extends Term.from_acton_re
+  mod def Term.from_action_su extends Term.from_action_su
 
   @[simp]
-  mod def extends smap where
+  mod def smap extends smap where
     matcher match_1 k lf f with
       | .zero => .zero
       | .succ n => .succ (smap k lf f n)
       | .natRec P0 PS n => .natRec (smap k lf f P0) (smap k lf f PS) (smap k lf f n)
 
   @[implicit_reducible,instance]
-  mod def extends SubstMap_Term -- TODO infer reducibility attribute from what it extends
+  mod def SubstMap_Term extends SubstMap_Term -- TODO infer reducibility attribute from what it extends
 
   @[grind =, simp]
-  mod def extends subst_var
+  mod def subst_var extends subst_var
   @[grind =, simp]
-  mod def extends subst_app
+  mod def subst_app extends subst_app
   @[grind =, simp]
-  mod def extends subst_lam
+  mod def subst_lam extends subst_lam
   @[grind =, simp]
   theorem subst_zero {σ} : (Term.zero)[σ] = Term.zero := by
     rfl
@@ -101,16 +101,24 @@ modular (name := `Term)
   @[grind =, simp]
   theorem subst_natRec {σ} : (Term.natRec P0 PS n)[σ] = Term.natRec P0[σ] PS[σ] n[σ] := by
     rfl
-  @[simp]
-  mod def extends Term.from_action_compose
 
-  mod def extends apply_id where
+  @[simp]
+  mod def ren_app extends ren_app
+
+  @[simp]
+  mod def ren_lam extends ren_lam
+
+
+  @[simp]
+  mod def Term.from_action_compose extends Term.from_action_compose
+
+  mod def apply_id extends apply_id where
     finally
       all_goals
         intros
         simp [*]
 
-  mod def extends apply_stable where
+  mod def apply_stable extends apply_stable where
     finally
       all_goals intros
       · rfl
@@ -121,19 +129,20 @@ modular (name := `Term)
         next ih_1 ih_2 ih_3 _ =>
           simp [LeanSubst.SubstMap.smap, smap, *] at *
           grind
+
   @[instance]
-  mod def extends SubstMapStable_Term
+  mod def SubstMapStable_Term extends SubstMapStable_Term
 
   @[simp]
-  mod def extends apply_compose where
+  mod def apply_compose extends apply_compose where
     finally all_goals grind
 
   @[instance]
-  mod def extends SubstMapCompose_Term
+  mod def SubstMapCompose_Term extends SubstMapCompose_Term
 
-  mod def extends to_ren_is_var
-  mod def extends ren_subst_apply_eq_lift
-  mod def extends ren_subst_apply_eq where
+  mod def to_ren_is_var extends to_ren_is_var
+  mod def ren_subst_apply_eq_lift extends ren_subst_apply_eq_lift
+  mod def ren_subst_apply_eq extends ren_subst_apply_eq where
     finally all_goals grind
 
 modular (imports := #[`Term]) (name := `ParRed)
@@ -236,9 +245,9 @@ modular (imports := #[`Term]) (name := `ParRed)
 
   add_mapping _root_.ParRed.triangle => ParRed.triangle
 
-  mod def extends ParRed.instSubstitutiveTerm
+  mod def ParRed.instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
 
-  mod def extends ParRed.instHasTriangleTerm
+  mod def ParRed.instHasTriangleTerm extends ParRed.instHasTriangleTerm
 end ParRed
 
 modular (name := `Red) (imports := #[`ParRed])
@@ -268,14 +277,14 @@ modular (name := `Red) (imports := #[`ParRed])
     finally all_goals grind
 
   @[grind .]
-  mod def extends Red.seq_implies_par where
+  mod def Red.seq_implies_par extends Red.seq_implies_par where
     finally
       all_goals intros <;> try grind
 
   @[grind .]
-  mod def extends Red.seqs_implies_pars
+  mod def Red.seqs_implies_pars extends Red.seqs_implies_pars
 
-  mod def extends Red.par_implies_seqs where
+  mod def Red.par_implies_seqs extends Red.par_implies_seqs where
     finally
       all_goals intros
       · constructor
@@ -291,15 +300,15 @@ modular (name := `Red) (imports := #[`ParRed])
         · apply LeanSubst.Star.congr2 <;> try grind
           · apply LeanSubst.Star.congr2 <;> grind
 
-  mod def extends Red.pars_implies_seqs
-  mod def extends Red.pars_action_lift
-  mod def extends Red.seqs_action_lift
-  mod def extends Red.seqs_action_destruct
-  mod def extends Red.pars_action_iff_seqs_action
+  mod def Red.pars_implies_seqs extends Red.pars_implies_seqs
+  mod def Red.pars_action_lift extends Red.pars_action_lift
+  mod def Red.seqs_action_lift extends Red.seqs_action_lift
+  mod def Red.seqs_action_destruct extends Red.seqs_action_destruct
+  mod def Red.pars_action_iff_seqs_action extends Red.pars_action_iff_seqs_action
 
-  mod def extends Red.subst_action
+  mod def Red.subst_action extends Red.subst_action
   @[grind .]
-  mod def extends Red.subst_red_lift
+  mod def Red.subst_red_lift extends Red.subst_red_lift
 
   mod def subst_arg extends _root_.Red.subst_arg where
     finally
@@ -313,9 +322,9 @@ modular (name := `Red) (imports := #[`ParRed])
 
   mod def confluence extends _root_.Red.confluence
 
-  mod def extends Red.instSubstitutiveTerm
+  mod def Red.instSubstitutiveTerm extends Red.instSubstitutiveTerm
 
-  mod def extends Red.instHasConfluenceTerm
+  mod def Red.instHasConfluenceTerm extends Red.instHasConfluenceTerm
 
   mod def preservation_of_neutral_step extends Red.preservation_of_neutral_step where
     finally
@@ -341,22 +350,22 @@ modular (name := `Typing) (imports := #[`Term])
 
   attribute [grind .] Typing.var Typing.app Typing.lam Typing.zero Typing.succ Typing.natRec
 
-  mod def extends typing_renaming_lift where
+  mod def typing_renaming_lift extends typing_renaming_lift where
     finally all_goals grind only
 
-  mod def extends typing_weaken where
+  mod def typing_weaken extends typing_weaken where
     finally
     all_goals first | simp [Ren.apply,SubstMap.smap,smap] <;> grind
 
-  mod def extends typing_subst_lift where
+  mod def typing_subst_lift extends typing_subst_lift where
     finally
       all_goals grind only
 
-  mod def extends typing_subst where
+  mod def typing_subst extends typing_subst where
     finally
       all_goals grind
 
-  mod def extends typing_beta where
+  mod def typing_beta extends typing_beta where
     finally
       all_goals grind only
 
@@ -374,19 +383,19 @@ modular (name := `Preservation) (imports := #[`Red, `Typing])
             (constructor <;>
             assumption)
 
-  mod def extends preservation
-
+  mod def preservation extends preservation
+-- #exit
 modular (name := `Infer) (imports := #[`Typing])
   deriving instance DecidableEq for Ty
 
   add_mapping _root_.instDecidableEqTy => instDecidableEqTy
 
-  mod def extends is_arrow where
+  mod def is_arrow extends is_arrow where
     matcher match_1 with
       | .nat => .none
 
   @[simp]
-  mod def extends infer where
+  mod def infer extends infer where
     matcher match_3 Γ with
       | .zero => some .nat
       | .succ n => do
@@ -413,18 +422,18 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
     | natRec : Value P0 → Value PS → Value n →
       ¬ n.is_nat_lit → Value (.natRec P0 PS n)
 
-  mod def extends value_sound where
+  mod def value_sound extends value_sound where
     finally
       all_goals try grind only [Term.is_nat_lit]
 
   inductive VarSpine extends VarSpine where
     | natRec : Value P0 → Value PS → VarSpine n → VarSpine (.natRec P0 PS n)
 
-  mod def extends var_spine_not_lam where
+  mod def var_spine_not_lam extends var_spine_not_lam where
     finally
       grind only [Term.is_lam]
 
-  mod def extends progress where
+  mod def progress extends progress where
     finally
       all_goals (try grind only [Value,Term.is_lam])
       · rintro a (h | ⟨t',h⟩)
@@ -694,7 +703,7 @@ modular (name := `SNi) (imports := #[`Progress])
   add_mapping _root_.SN.backward_closure => SN.backward_closure
 
   @[reducible]
-  mod def extends SnIndices
+  mod def SnIndices extends SnIndices
 
   inductive SNi extends SNi where
     | zero : SNi .nor .zero
@@ -727,7 +736,7 @@ modular (name := `SNi) (imports := #[`Progress])
         rename_i ih _
         apply ih
 
-  mod def extends SNi.SnAntiRenameLemmaType
+  mod def SNi.SnAntiRenameLemmaType extends SNi.SnAntiRenameLemmaType
 
   mod def antirename extends SNi.antirename where
     finally
@@ -770,14 +779,14 @@ modular (name := `SNi) (imports := #[`Progress])
       apply natRecStep
       assumption
 
-  mod def extends SNi.SnBetaVarLemmaType
+  mod def SNi.SnBetaVarLemmaType extends SNi.SnBetaVarLemmaType
 
   mod def beta_var extends SNi.beta_var where
     finally
       all_goals try grind (splits := 0) only [SNi.SnBetaVarLemmaType]
 
   @[simp]
-  mod def extends SNi.SnPropertyWeakenLemmaType
+  mod def SNi.SnPropertyWeakenLemmaType extends SNi.SnPropertyWeakenLemmaType
 
   mod def property_weaken extends SNi.property_weaken where
     finally
@@ -787,7 +796,7 @@ modular (name := `SNi) (imports := #[`Progress])
     · intros; constructor
     · intros; apply Red.natRec3; assumption
 
-  mod def extends SNi.SnSoundLemmaType
+  mod def SNi.SnSoundLemmaType extends SNi.SnSoundLemmaType
 
   mod def sound extends SNi.sound where
     finally
@@ -851,24 +860,24 @@ theorem TypingSubst.succ : X -[+1]> A::X := by
   intro x T h; simp
   apply Typing.var; exact h
 
-def TypingSubst.re (j : Δ[y]? = some A) (m : Γ -[σ]> Δ) : A::Γ -[re y::σ]> Δ :=
+theorem TypingSubst.re (j : Δ[y]? = some A) (m : Γ -[σ]> Δ) : A::Γ -[re y::σ]> Δ :=
   mk (λ {x} {T} h =>
     match x with
     | 0 => .var $ cast (by simp at h; rw [h]) j
     | x + 1 => m.act h)
 
-def TypingSubst.su {a : Term} (j : Δ ⊢ a : A) (m : Γ -[σ]> Δ) : A::Γ -[su a::σ]> Δ :=
+theorem TypingSubst.su {a : Term} (j : Δ ⊢ a : A) (m : Γ -[σ]> Δ) : A::Γ -[su a::σ]> Δ :=
   mk (λ {x} {T} h =>
     match x with
     | 0 => cast (by simp; grind) j
     | x + 1 => m.act h)
 
-def TypingSubst.forget (m : X -[r.to]> Y) : X -⟨r⟩> Y :=
+theorem TypingSubst.forget (m : X -[r.to]> Y) : X -⟨r⟩> Y :=
   .mk (λ h => match m.act h with | .var h => h)
 
 -- def TypingRen.to (m : X -⟨r⟩> Y) : X -[r.to]> Y := sorry
 
-def Typing.rename (m : Γ -⟨r⟩> Δ) : Γ ⊢ t : A -> Δ ⊢ t[r] : A
+theorem Typing.rename (m : Γ -⟨r⟩> Δ) : Γ ⊢ t : A -> Δ ⊢ t[r] : A
 | @var Γ T x h => var (m.act h)
 | app f a => app (f.rename m) (a.rename m)
 | lam (A := C) t =>
@@ -891,7 +900,7 @@ theorem TypingSubst.lift {Γ Δ : List Ty} A {σ : Subst Term} :
     have lem := Typing.rename (Δ := A::Δ) TypingRen.succ (j.act h)
     simp at lem; exact lem
 
-def Typing.subst (m : Γ -[σ]> Δ) : Γ ⊢ t : A -> Δ ⊢ t[σ] : A
+theorem Typing.subst (m : Γ -[σ]> Δ) : Γ ⊢ t : A -> Δ ⊢ t[σ] : A
 | var h => m.act h
 | app f a => app (f.subst m) (a.subst m)
 | lam (A := C) t => lam (t.subst (m.lift C))
@@ -1016,7 +1025,7 @@ theorem LR.nrec_neutral
   theorem LR.app (flr : LR Γ (A -t> B) f) (alr : LR Γ A a) : LR Γ B (f.app a) :=
     cast (by simp) $ flr.2 TypingRen.id alr
 
-  def LR.natRec' (h1 : LR Γ A z) (h2 : LR Γ (.nat -t> A -t> A) s)
+  theorem LR.natRec' (h1 : LR Γ A z) (h2 : LR Γ (.nat -t> A -t> A) s)
       : (t : SNi v n) → (e : v = .nor) →
       let n' :  SnIndices .nor := e ▸ n;
       (j : Γ ⊢ n' : Ty.nat) → LR Γ A (.natRec z s n')
@@ -1035,10 +1044,10 @@ theorem LR.nrec_neutral
       cr.2.2 _ _ j' (SNi.natRecStep r) (natRec' h1 h2 t' rfl (preservation_step j r'))
     termination_by structural t => t
 
-  def LR.natRec (h1 : LR Γ A z) (h2 : LR Γ (.nat -t> A -t> A) s) (j : Γ ⊢ n : Ty.nat) (t : SNi .nor n)
+  theorem LR.natRec (h1 : LR Γ A z) (h2 : LR Γ (.nat -t> A -t> A) s) (j : Γ ⊢ n : Ty.nat) (t : SNi .nor n)
     : LR Γ A (.natRec z s n) := natRec' h1 h2 t rfl j
 
-  def fundamental {A : Ty}: Γ ⊢ t : A -> Γ ⊨s t : A
+  theorem fundamental {A : Ty}: Γ ⊢ t : A -> Γ ⊨s t : A
   | .var j, σ, Δ, h => h j
   | .app (f := f) (a := a) fj aj, σ, Δ, h =>
     let aj' := fundamental aj σ Δ h

@@ -78,7 +78,7 @@ namespace WeakNormalization
         cases x <;> simp at *
         case _ => subst h2; apply vr
         case _ x => apply h x T h2
-      }); simp at lem
+      })
       apply lem
 end WeakNormalization
 

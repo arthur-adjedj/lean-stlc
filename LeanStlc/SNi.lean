@@ -214,7 +214,6 @@ namespace SNi
     case lam t A j ih =>
       apply SNi.lam
       replace ih := ih r.lift
-      simp at ih
       rw [Ren.to_lift] at ih
       simp at ih
       apply ih
