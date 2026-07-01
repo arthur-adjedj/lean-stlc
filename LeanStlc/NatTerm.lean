@@ -22,7 +22,7 @@ namespace LeanSubst.Star
 end LeanSubst.Star
 namespace NatExt
 
-modular (name := `Term)
+modular (name := `NatTerm)
 
   inductive Ty extends Ty where
     | nat
@@ -108,7 +108,6 @@ modular (name := `Term)
   @[simp]
   mod def ren_lam extends ren_lam
 
-
   @[simp]
   mod def Term.from_action_compose extends Term.from_action_compose
 
@@ -145,7 +144,7 @@ modular (name := `Term)
   mod def ren_subst_apply_eq extends ren_subst_apply_eq where
     finally all_goals grind
 
-modular (imports := #[`Term]) (name := `ParRed)
+-- modular (imports := #[`Term]) (name := `ParRed)
   inductive ParRed extends ParRed where
     | zero : ParRed .zero .zero
     | succ : ParRed n₁ n₂ → ParRed n₁.succ n₂.succ
@@ -248,9 +247,9 @@ modular (imports := #[`Term]) (name := `ParRed)
   mod def ParRed.instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
 
   mod def ParRed.instHasTriangleTerm extends ParRed.instHasTriangleTerm
-end ParRed
+  end ParRed
 
-modular (name := `Red) (imports := #[`ParRed])
+-- modular (name := `Red) (imports := #[`ParRed])
   inductive Red extends Red where
     | succ : Red n₁ n₂ → Red n₁.succ n₂.succ
     | natRec1 {P0 P0' PS n} :
@@ -341,11 +340,11 @@ modular (name := `Red) (imports := #[`ParRed])
 
   end Red
 
-modular (name := `Typing) (imports := #[`Term])
+-- modular (name := `Typing) (imports := #[`Term])
   inductive Typing extends Typing where
     | zero  : Typing Γ .zero .nat
     | succ  : Typing Γ n .nat → Typing Γ (.succ n) .nat
-    | natRec : Typing Γ P0 A → Typing Γ PS (.nat -t> A -t> A) → Typing Γ n .nat → Typing Γ (.natRec P0 PS n) A
+    | natRec : Typing Γ P0 A → Typing Γ PS (Ty.nat.arrow (A.arrow A)) → Typing Γ n .nat → Typing Γ (.natRec P0 PS n) A
   notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
 
   attribute [grind .] Typing.var Typing.app Typing.lam Typing.zero Typing.succ Typing.natRec
@@ -369,7 +368,7 @@ modular (name := `Typing) (imports := #[`Term])
     finally
       all_goals grind only
 
-modular (name := `Preservation) (imports := #[`Red, `Typing])
+-- modular (name := `Preservation) (imports := #[`Red, `Typing])
   mod def preservation_step extends preservation_step where
     finally
       all_goals (try grind (splits := 1) only) <;> intros
@@ -385,7 +384,7 @@ modular (name := `Preservation) (imports := #[`Red, `Typing])
 
   mod def preservation extends preservation
 -- #exit
-modular (name := `Infer) (imports := #[`Typing])
+-- modular (name := `Infer) (imports := #[`Typing])
   deriving instance DecidableEq for Ty
 
   add_mapping _root_.instDecidableEqTy => instDecidableEqTy
@@ -404,7 +403,7 @@ modular (name := `Infer) (imports := #[`Typing])
       | .natRec P0 PS n => do
         let .nat ← infer Γ n | none
         let A ← infer Γ P0
-        let .nat -t> C -t> D ← infer Γ PS | none
+        let Ty.arrow .nat (Ty.arrow C D) ← infer Γ PS | none
         if A = C ∧ A = D then
           return A
         else none
@@ -412,7 +411,7 @@ modular (name := `Infer) (imports := #[`Typing])
   -- currently fails with a weird unification error: two (synthetic opaque) mvars refuse to unify with a `readOnlyMVarWithBiggerLCtx` trace.
   -- mod def extends infer_sound
 
-modular (name := `Progress) (imports := #[`Red, `Typing])
+-- modular (name := `Progress) (imports := #[`Red, `Typing])
   @[grind]
   mod def Term.is_lam extends _root_.Term.is_lam
 
@@ -465,7 +464,7 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
           | apply Red.natRec2; assumption
           | apply Red.natRec3; assumption
 
-modular (name := `SNi) (imports := #[`Progress])
+-- modular (name := `SNi) (imports := #[`Progress])
 
   inductive SnHeadRed extends SnHeadRed where
     | natRecZero : SN Red PS → SnHeadRed (.natRec P0 PS .zero) P0

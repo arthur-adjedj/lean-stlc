@@ -20,9 +20,9 @@ namespace LeanSubst.Star
   fun h₁ h₂ =>
   (.step (.step .refl h₁) h₂)
 end LeanSubst.Star
-namespace NatExt
+namespace BoolTerm
 
-modular (name := `Term)
+modular (name := `BoolTerm)
 
   inductive Ty extends Ty where
     | bool
@@ -142,7 +142,7 @@ modular (name := `Term)
   mod def ren_subst_apply_eq extends ren_subst_apply_eq where
     finally all_goals grind
 
-modular (imports := #[`Term]) (name := `ParRed)
+-- -- modular (imports := #[`Term]) (name := `ParRed)
   inductive ParRed extends ParRed where
     | true : ParRed .true .true
     | false : ParRed .false .false
@@ -239,9 +239,9 @@ modular (imports := #[`Term]) (name := `ParRed)
   mod def ParRed.instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
 
   mod def ParRed.instHasTriangleTerm extends ParRed.instHasTriangleTerm
-end ParRed
+  end ParRed
 
-modular (name := `Red) (imports := #[`ParRed])
+-- -- modular (name := `Red) (imports := #[`ParRed])
   inductive Red extends Red where
     | ite1 :
       Red b b' ->
@@ -327,7 +327,7 @@ modular (name := `Red) (imports := #[`ParRed])
 
   end Red
 
-modular (name := `Typing) (imports := #[`Term])
+-- modular (name := `Typing) (imports := #[`Term])
   inductive Typing extends Typing where
     | true  : Typing Γ .true .bool
     | false : Typing Γ .false .bool
@@ -355,7 +355,7 @@ modular (name := `Typing) (imports := #[`Term])
     finally
       all_goals grind only
 
-modular (name := `Preservation) (imports := #[`Red, `Typing])
+-- modular (name := `Preservation) (imports := #[`Red, `Typing])
   mod def preservation_step extends preservation_step where
     finally
       all_goals (try grind (splits := 1) only) <;> intros
@@ -370,7 +370,7 @@ modular (name := `Preservation) (imports := #[`Red, `Typing])
 
   mod def preservation extends preservation
 -- #exit
-modular (name := `Infer) (imports := #[`Typing])
+-- modular (name := `Infer) (imports := #[`Typing])
   deriving instance DecidableEq for Ty
 
   add_mapping _root_.instDecidableEqTy => instDecidableEqTy
@@ -395,7 +395,7 @@ modular (name := `Infer) (imports := #[`Typing])
   -- currently fails with a weird unification error: two (synthetic opaque) mvars refuse to unify with a `readOnlyMVarWithBiggerLCtx` trace.
   -- mod def extends infer_sound
 
-modular (name := `Progress) (imports := #[`Red, `Typing])
+-- modular (name := `Progress) (imports := #[`Red, `Typing])
   @[grind]
   mod def Term.is_lam extends _root_.Term.is_lam
 
@@ -440,7 +440,7 @@ modular (name := `Progress) (imports := #[`Red, `Typing])
           | apply Red.ite2; assumption
           | apply Red.ite3; assumption
 
-modular (name := `SNi) (imports := #[`Progress])
+-- modular (name := `SNi) (imports := #[`Progress])
 
   inductive SnHeadRed extends SnHeadRed where
     | iteTrue  : SN Red Pf → SnHeadRed (.ite .true Pt Pf) Pt
@@ -1034,3 +1034,5 @@ theorem strong_normalization_inductive {A : Ty} (j : Γ ⊢ t : A) : SNi .nor t 
 
 theorem strong_normalization  {A : Ty} (j : Γ ⊢ t : A) : SN Red t :=
   SNi.sound $ strong_normalization_inductive j
+set_option trace.Modular.Elab true
+modular
