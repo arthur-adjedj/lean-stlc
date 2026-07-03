@@ -20,9 +20,9 @@ namespace LeanSubst.Star
   fun h₁ h₂ =>
   (.step (.step .refl h₁) h₂)
 end LeanSubst.Star
-namespace NatExt
 
 modular (name := `NatTerm)
+  namespace NatExt
 
   inductive Ty extends Ty where
     | nat
@@ -231,7 +231,6 @@ modular (name := `NatTerm)
         let n  := complete n
         .natRec P0 PS n
 
-  open LeanSubst in
   theorem triangle {t s : Term} : ParRed t s -> ParRed s (complete t) := by
     intro r; fun_induction complete generalizing s <;> try grind
     case case1  =>
@@ -244,9 +243,9 @@ modular (name := `NatTerm)
 
   add_mapping _root_.ParRed.triangle => ParRed.triangle
 
-  mod def ParRed.instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
+  mod def instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
 
-  mod def ParRed.instHasTriangleTerm extends ParRed.instHasTriangleTerm
+  mod def instHasTriangleTerm extends ParRed.instHasTriangleTerm
   end ParRed
 
 -- modular (name := `Red) (imports := #[`ParRed])
@@ -276,14 +275,14 @@ modular (name := `NatTerm)
     finally all_goals grind
 
   @[grind .]
-  mod def Red.seq_implies_par extends Red.seq_implies_par where
+  mod def seq_implies_par extends Red.seq_implies_par where
     finally
       all_goals intros <;> try grind
 
   @[grind .]
-  mod def Red.seqs_implies_pars extends Red.seqs_implies_pars
+  mod def seqs_implies_pars extends Red.seqs_implies_pars
 
-  mod def Red.par_implies_seqs extends Red.par_implies_seqs where
+  mod def par_implies_seqs extends Red.par_implies_seqs where
     finally
       all_goals intros
       · constructor
@@ -299,15 +298,15 @@ modular (name := `NatTerm)
         · apply LeanSubst.Star.congr2 <;> try grind
           · apply LeanSubst.Star.congr2 <;> grind
 
-  mod def Red.pars_implies_seqs extends Red.pars_implies_seqs
-  mod def Red.pars_action_lift extends Red.pars_action_lift
-  mod def Red.seqs_action_lift extends Red.seqs_action_lift
-  mod def Red.seqs_action_destruct extends Red.seqs_action_destruct
-  mod def Red.pars_action_iff_seqs_action extends Red.pars_action_iff_seqs_action
+  mod def pars_implies_seqs extends Red.pars_implies_seqs
+  mod def pars_action_lift extends Red.pars_action_lift
+  mod def seqs_action_lift extends Red.seqs_action_lift
+  mod def seqs_action_destruct extends Red.seqs_action_destruct
+  mod def pars_action_iff_seqs_action extends Red.pars_action_iff_seqs_action
 
-  mod def Red.subst_action extends Red.subst_action
+  mod def subst_action extends Red.subst_action
   @[grind .]
-  mod def Red.subst_red_lift extends Red.subst_red_lift
+  mod def subst_red_lift extends Red.subst_red_lift
 
   mod def subst_arg extends _root_.Red.subst_arg where
     finally
@@ -321,9 +320,9 @@ modular (name := `NatTerm)
 
   mod def confluence extends _root_.Red.confluence
 
-  mod def Red.instSubstitutiveTerm extends Red.instSubstitutiveTerm
+  mod def instSubstitutiveTerm extends Red.instSubstitutiveTerm
 
-  mod def Red.instHasConfluenceTerm extends Red.instHasConfluenceTerm
+  mod def instHasConfluenceTerm extends Red.instHasConfluenceTerm
 
   mod def preservation_of_neutral_step extends Red.preservation_of_neutral_step where
     finally
@@ -371,17 +370,22 @@ modular (name := `NatTerm)
 -- modular (name := `Preservation) (imports := #[`Red, `Typing])
   mod def preservation_step extends preservation_step where
     finally
-      all_goals (try grind (splits := 1) only) <;> intros
-      · grind only [Red,Typing]
-      · rename_i r
-        cases r <;> first
-          | grind (splits := 0) only [Typing]
-          | rename_i h _
-            cases h
-            constructor <;>
-            (constructor <;>
+      all_goals (try simp) <;> (intros; rename_i r)
+      · cases r
+      · cases r
+        constructor
+        rename_i ih _ _
+        apply ih
+        assumption
+      · cases r
+        case natRecSucc =>
+          rename_i h _
+          cases h
+          constructor <;>
+          (constructor <;>
             assumption)
-
+        all_goals solve_by_elim
+-- #exit
   mod def preservation extends preservation
 -- #exit
 -- modular (name := `Infer) (imports := #[`Typing])
@@ -434,7 +438,7 @@ modular (name := `NatTerm)
 
   mod def progress extends progress where
     finally
-      all_goals (try grind only [Value,Term.is_lam])
+      all_goals (try grind (splits := 0) only [Value,Term.is_lam])
       · rintro a (h | ⟨t',h⟩)
         · left
           constructor
@@ -445,17 +449,18 @@ modular (name := `NatTerm)
           assumption
       · rintro P0 PS n (hP0 | ⟨P0',hP0⟩) (hPS | ⟨PS',hPS⟩) (hn | ⟨n',hn⟩)
         · by_cases h : n.is_nat_lit
-          · unfold Term.is_nat_lit at h
-            split at h
-            · right
+          · cases n
+            case zero =>
+              right
               constructor
               apply Red.natRecZero
-            · right
+            case succ =>
+              right
               constructor
               apply Red.natRecSucc
-            · contradiction
+            all_goals contradiction
           · left
-            grind only [Value]
+            constructor <;> assumption
         all_goals
           right
           constructor
@@ -472,9 +477,9 @@ modular (name := `NatTerm)
     | natRecStep : SnHeadRed n n' -> SnHeadRed (.natRec P0 PS n) (.natRec P0 PS n')
   infix:80 " ~>sn " => SnHeadRed
 
-  mod def red_compatible extends SnHeadRed.red_compatible where
+  mod def SnHeadRed.red_compatible extends SnHeadRed.red_compatible where
     finally
-      all_goals (try grind only)
+      all_goals (try (intros;contradiction))
       · intro _ _ _ _ r
         cases r
         · right
@@ -590,7 +595,7 @@ modular (name := `NatTerm)
     cases r2
     case _ => cases r1
     case _ f'' r =>
-      have lem1 := red_compatible r1 r
+      have lem1 := SnHeadRed.red_compatible r1 r
       cases lem1
       case _ lem1 => subst lem1; apply h3
       case _ lem1 =>
@@ -628,7 +633,7 @@ modular (name := `NatTerm)
       apply SN.preservation_step h4
       apply Red.natRec2 r
     case natRec3 n'' r =>
-      have lem1 := red_compatible r1 r
+      have lem1 := SnHeadRed.red_compatible r1 r
       cases lem1
       case _ lem1 => subst lem1; exact h4
       case _ lem1 =>

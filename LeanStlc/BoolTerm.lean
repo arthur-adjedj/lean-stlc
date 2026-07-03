@@ -20,9 +20,9 @@ namespace LeanSubst.Star
   fun h₁ h₂ =>
   (.step (.step .refl h₁) h₂)
 end LeanSubst.Star
-namespace BoolTerm
 
 modular (name := `BoolTerm)
+  namespace BoolTerm
 
   inductive Ty extends Ty where
     | bool
@@ -142,7 +142,6 @@ modular (name := `BoolTerm)
   mod def ren_subst_apply_eq extends ren_subst_apply_eq where
     finally all_goals grind
 
--- -- modular (imports := #[`Term]) (name := `ParRed)
   inductive ParRed extends ParRed where
     | true : ParRed .true .true
     | false : ParRed .false .false
@@ -236,12 +235,11 @@ modular (name := `BoolTerm)
 
   add_mapping _root_.ParRed.triangle => ParRed.triangle
 
-  mod def ParRed.instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
+  mod def instSubstitutiveTerm extends ParRed.instSubstitutiveTerm
 
-  mod def ParRed.instHasTriangleTerm extends ParRed.instHasTriangleTerm
+  mod def instHasTriangleTerm extends ParRed.instHasTriangleTerm
   end ParRed
 
--- -- modular (name := `Red) (imports := #[`ParRed])
   inductive Red extends Red where
     | ite1 :
       Red b b' ->
@@ -265,14 +263,14 @@ modular (name := `BoolTerm)
     finally all_goals grind
 
   @[grind .]
-  mod def Red.seq_implies_par extends Red.seq_implies_par where
+  mod def seq_implies_par extends Red.seq_implies_par where
     finally
       all_goals intros <;> try grind
 
   @[grind .]
-  mod def Red.seqs_implies_pars extends Red.seqs_implies_pars
+  mod def seqs_implies_pars extends Red.seqs_implies_pars
 
-  mod def Red.par_implies_seqs extends Red.par_implies_seqs where
+  mod def par_implies_seqs extends Red.par_implies_seqs where
     finally
       all_goals intros
       · constructor
@@ -287,15 +285,15 @@ modular (name := `BoolTerm)
           exact Red.iteFalse
         · assumption
 
-  mod def Red.pars_implies_seqs extends Red.pars_implies_seqs
-  mod def Red.pars_action_lift extends Red.pars_action_lift
-  mod def Red.seqs_action_lift extends Red.seqs_action_lift
-  mod def Red.seqs_action_destruct extends Red.seqs_action_destruct
-  mod def Red.pars_action_iff_seqs_action extends Red.pars_action_iff_seqs_action
+  mod def pars_implies_seqs extends Red.pars_implies_seqs
+  mod def pars_action_lift extends Red.pars_action_lift
+  mod def seqs_action_lift extends Red.seqs_action_lift
+  mod def seqs_action_destruct extends Red.seqs_action_destruct
+  mod def pars_action_iff_seqs_action extends Red.pars_action_iff_seqs_action
 
-  mod def Red.subst_action extends Red.subst_action
+  mod def subst_action extends Red.subst_action
   @[grind .]
-  mod def Red.subst_red_lift extends Red.subst_red_lift
+  mod def subst_red_lift extends Red.subst_red_lift
 
   mod def subst_arg extends _root_.Red.subst_arg where
     finally
@@ -308,9 +306,9 @@ modular (name := `BoolTerm)
 
   mod def confluence extends _root_.Red.confluence
 
-  mod def Red.instSubstitutiveTerm extends Red.instSubstitutiveTerm
+  mod def instSubstitutiveTerm extends Red.instSubstitutiveTerm
 
-  mod def Red.instHasConfluenceTerm extends Red.instHasConfluenceTerm
+  mod def instHasConfluenceTerm extends Red.instHasConfluenceTerm
 
   mod def preservation_of_neutral_step extends Red.preservation_of_neutral_step where
     finally
@@ -327,7 +325,6 @@ modular (name := `BoolTerm)
 
   end Red
 
--- modular (name := `Typing) (imports := #[`Term])
   inductive Typing extends Typing where
     | true  : Typing Γ .true .bool
     | false : Typing Γ .false .bool
@@ -355,22 +352,13 @@ modular (name := `BoolTerm)
     finally
       all_goals grind only
 
--- modular (name := `Preservation) (imports := #[`Red, `Typing])
   mod def preservation_step extends preservation_step where
     finally
-      all_goals (try grind (splits := 1) only) <;> intros
-      · rename_i r
-        cases r <;> first
-          | grind (splits := 0) only [Typing]
-          | rename_i h _
-            cases h
-            constructor <;>
-            (constructor <;>
-            assumption)
+      all_goals (try simp) <;> (intros; rename_i r; cases r)
+      all_goals solve_by_elim
 
   mod def preservation extends preservation
--- #exit
--- modular (name := `Infer) (imports := #[`Typing])
+
   deriving instance DecidableEq for Ty
 
   add_mapping _root_.instDecidableEqTy => instDecidableEqTy
@@ -395,7 +383,6 @@ modular (name := `BoolTerm)
   -- currently fails with a weird unification error: two (synthetic opaque) mvars refuse to unify with a `readOnlyMVarWithBiggerLCtx` trace.
   -- mod def extends infer_sound
 
--- modular (name := `Progress) (imports := #[`Red, `Typing])
   @[grind]
   mod def Term.is_lam extends _root_.Term.is_lam
 
@@ -418,20 +405,21 @@ modular (name := `BoolTerm)
 
   mod def progress extends progress where
     finally
-      all_goals (try grind only [Value,Term.is_lam])
+      all_goals (try grind (splits := 0) only [Value,Term.is_lam])
       · rintro b P0 PS (hP0 | ⟨P0',hP0⟩) (hPS | ⟨PS',hPS⟩) (hn | ⟨n',hn⟩)
         · by_cases h : b.is_bool_lit
-          · unfold Term.is_bool_lit at h
-            split at h
-            · right
+          · cases b
+            case true =>
+              right
               constructor
               apply Red.iteTrue
-            · right
+            case false =>
+              right
               constructor
               apply Red.iteFalse
-            · contradiction
+            all_goals contradiction
           · left
-            grind only [Value]
+            constructor <;> assumption
         all_goals
           right
           constructor
@@ -440,17 +428,15 @@ modular (name := `BoolTerm)
           | apply Red.ite2; assumption
           | apply Red.ite3; assumption
 
--- modular (name := `SNi) (imports := #[`Progress])
-
   inductive SnHeadRed extends SnHeadRed where
     | iteTrue  : SN Red Pf → SnHeadRed (.ite .true Pt Pf) Pt
     | iteFalse : SN Red Pt → SnHeadRed (.ite .false Pt Pf) Pf
     | iteStep : SnHeadRed b b' -> SnHeadRed (.ite b Pt Pf) (.ite b' Pt Pf)
   infix:80 " ~>sn " => SnHeadRed
 
-  mod def red_compatible extends SnHeadRed.red_compatible where
+  mod def SnHeadRed.red_compatible extends SnHeadRed.red_compatible where
     finally
-      all_goals (try grind only)
+      all_goals (try (intros;contradiction))
       · intro _ _ _ _ r
         cases r
         · rename_i r; cases r
@@ -520,7 +506,7 @@ modular (name := `BoolTerm)
   mod def neutral_app extends SN.neutral_app where
     finally all_goals grind only
 
-  theorem neutral_ite :
+  theorem neutral_ite {b Pt Pf} :
     Neutral b ->
     SN Red b ->
     SN Red Pt ->
@@ -563,7 +549,7 @@ modular (name := `BoolTerm)
     cases r2
     case _ => cases r1
     case _ f'' r =>
-      have lem1 := red_compatible r1 r
+      have lem1 := SnHeadRed.red_compatible r1 r
       cases lem1
       case _ lem1 => subst lem1; apply h3
       case _ lem1 =>
@@ -593,7 +579,7 @@ modular (name := `BoolTerm)
     case iteTrue => cases r1
     case iteFalse => cases r1
     case ite1 b'' r =>
-      have lem1 := red_compatible r1 r
+      have lem1 := SnHeadRed.red_compatible r1 r
       cases lem1
       case _ lem1 => subst lem1; exact h4
       case _ lem1 =>
@@ -779,12 +765,13 @@ modular (name := `BoolTerm)
 
   end SNi
 
+
 structure TypingRen (r : Ren) (Γ Δ : List Ty) where
   act : ∀ {x T}, Γ[x]? = some T -> Δ[r x]? = some T
 
-notation:35 Γ:35 " -⟨" r "⟩> " Δ:35 => TypingRen r Γ Δ
+notation:35 Γ:35 "-⟨" r "⟩>" Δ:35 => TypingRen r Γ Δ
 
-theorem TypingRen.lift {Γ Δ : List Ty} A {r : Ren} : Γ -⟨r⟩> Δ -> A::Γ -⟨r.lift⟩> A::Δ := by
+theorem TypingRen.lift {Γ Δ : List Ty} A {r : Ren} : (Γ -⟨r⟩> Δ) -> (A::Γ) -⟨r.lift⟩> (A::Δ) := by
   intro h; apply mk; intro x T j
   cases x <;> simp [Ren.lift] at *
   exact j; case _ x =>
@@ -1034,5 +1021,3 @@ theorem strong_normalization_inductive {A : Ty} (j : Γ ⊢ t : A) : SNi .nor t 
 
 theorem strong_normalization  {A : Ty} (j : Γ ⊢ t : A) : SN Red t :=
   SNi.sound $ strong_normalization_inductive j
-set_option trace.Modular.Elab true
-modular
