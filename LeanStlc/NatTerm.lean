@@ -740,13 +740,14 @@ modular (name := `NatTerm)
         rename_i ih _
         apply ih
 
-  mod def SNi.SnAntiRenameLemmaType extends SNi.SnAntiRenameLemmaType
+  mod def SnAntiRenameLemmaType extends SNi.SnAntiRenameLemmaType
 
   mod def antirename extends SNi.antirename where
     finally
     all_goals
       repeat intro
-      try grind
+      subst_vars
+      try simp at *
     · rename_i z e
       cases z <;> simp only [subst_var,subst_app,subst_lam,subst_zero, subst_succ,subst_natRec] at e <;> try cases e
       exact SNi.zero
@@ -783,14 +784,14 @@ modular (name := `NatTerm)
       apply natRecStep
       assumption
 
-  mod def SNi.SnBetaVarLemmaType extends SNi.SnBetaVarLemmaType
+  mod def SnBetaVarLemmaType extends SNi.SnBetaVarLemmaType
 
   mod def beta_var extends SNi.beta_var where
     finally
       all_goals try grind (splits := 0) only [SNi.SnBetaVarLemmaType]
 
   @[simp]
-  mod def SNi.SnPropertyWeakenLemmaType extends SNi.SnPropertyWeakenLemmaType
+  mod def SnPropertyWeakenLemmaType extends SNi.SnPropertyWeakenLemmaType
 
   mod def property_weaken extends SNi.property_weaken where
     finally
@@ -800,7 +801,7 @@ modular (name := `NatTerm)
     · intros; constructor
     · intros; apply Red.natRec3; assumption
 
-  mod def SNi.SnSoundLemmaType extends SNi.SnSoundLemmaType
+  mod def SnSoundLemmaType extends SNi.SnSoundLemmaType
 
   mod def sound extends SNi.sound where
     finally
@@ -930,7 +931,7 @@ notation:170 Γ:170 " ⊨s " t:170 " : " A:170 => SemanticTyping Γ t A
 
 theorem LR.typing : LR Γ A t -> Γ ⊢ t : A := by
   intro j; induction A generalizing Γ t
-  all_goals simp at j; grind
+  all_goals exact j.1
 
 theorem LR.monotone (m : Γ -⟨r⟩> Δ) : LR Γ A t -> LR Δ A t[r] := by
   intro h; induction A generalizing Γ Δ t r

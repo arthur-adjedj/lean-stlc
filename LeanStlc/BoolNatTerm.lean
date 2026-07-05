@@ -241,8 +241,6 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
         cases h
         contradiction
 
-modular (name := `Part2) (imports := #[`BoolNatTerm])
-
   inductive SnHeadRed extends NatExt.SnHeadRed, BoolTerm.SnHeadRed
   infix:80 " ~>sn " => SnHeadRed
 
@@ -289,3 +287,108 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
   mod def backward_closure extends NatExt.SN.backward_closure, BoolTerm.SN.backward_closure
 
   end SN
+
+  @[reducible]
+  mod def SnIndices extends NatExt.SnIndices, BoolTerm.SnIndices
+
+  inductive SNi extends NatExt.SNi, BoolTerm.SNi
+
+  namespace SNi
+  mod def SnRenameLemmaType extends NatExt.SNi.SnRenameLemmaType, BoolTerm.SNi.SnRenameLemmaType
+
+  mod def rename extends NatExt.SNi.rename, BoolTerm.SNi.rename
+
+  mod def SnAntiRenameLemmaType extends NatExt.SNi.SnAntiRenameLemmaType, BoolTerm.SNi.SnAntiRenameLemmaType
+
+  mod def antirename extends NatExt.SNi.antirename, BoolTerm.SNi.antirename where
+    finally
+      all_goals
+        repeat intro
+        subst_vars
+        simp at *
+
+  mod def SnBetaVarLemmaType extends NatExt.SNi.SnBetaVarLemmaType, BoolTerm.SNi.SnBetaVarLemmaType
+
+  mod def beta_var extends NatExt.SNi.beta_var, BoolTerm.SNi.beta_var
+
+  @[simp]
+  mod def SnPropertyWeakenLemmaType extends NatExt.SNi.SnPropertyWeakenLemmaType, BoolTerm.SNi.SnPropertyWeakenLemmaType
+
+  mod def property_weaken extends NatExt.SNi.property_weaken, BoolTerm.SNi.property_weaken
+
+  mod def SnSoundLemmaType extends NatExt.SNi.SnSoundLemmaType, BoolTerm.SNi.SnSoundLemmaType
+
+  mod def sound extends NatExt.SNi.sound, BoolTerm.SNi.sound where
+    finally
+      all_goals grind (splits := 0) only
+
+  end SNi
+
+  inductive TypingRen extends NatExt.TypingRen, BoolTerm.TypingRen
+  notation:35 Γ:35 "-⟨" r "⟩>" Δ:35 => TypingRen r Γ Δ
+
+  --TODO! add structure extensions, map structure fields accordingly
+  theorem TypingRen.act {r : Ren} {Γ Δ : List Ty}  (self : TypingRen r Γ Δ) {x : Nat} {T : Ty} : Γ[x]? = some T → Δ[r x]? = some T := self.1
+
+  add_mapping NatExt.TypingRen.act => TypingRen.act
+  add_mapping BoolTerm.TypingRen.act => TypingRen.act
+
+  mod def TypingRen.lift extends NatExt.TypingRen.lift, BoolTerm.TypingRen.lift
+  mod def TypingRen.id extends NatExt.TypingRen.id, BoolTerm.TypingRen.id
+  mod def TypingRen.succ extends NatExt.TypingRen.succ, BoolTerm.TypingRen.succ
+  mod def TypingRen.comp extends NatExt.TypingRen.comp, BoolTerm.TypingRen.comp
+
+  infixr:90 " ∘ "  => TypingRen.comp
+
+  inductive TypingSubst extends NatExt.TypingSubst, BoolTerm.TypingSubst
+  notation:35 Γ:35 " -[" σ "]> " Δ:35 => TypingSubst σ Γ Δ
+
+  theorem TypingSubst.act {σ : Subst Term} {Γ Δ : List Ty}  (self : TypingSubst σ Γ Δ) {x : Nat} {T : Ty} : Γ[x]? = some T → Δ ⊢ σ x : T := self.1
+
+  add_mapping NatExt.TypingSubst.act => TypingSubst.act
+  add_mapping BoolTerm.TypingSubst.act => TypingSubst.act
+
+  mod def TypingSubst.succ extends NatExt.TypingSubst.succ, BoolTerm.TypingSubst.succ
+  -- These are probably not needed
+  -- mod def TypingSubst.re extends NatExt.TypingSubst.re, BoolTerm.TypingSubst.re
+  -- mod def TypingSubst.su extends NatExt.TypingSubst.su, BoolTerm.TypingSubst.su
+  mod def TypingSubst.forget extends NatExt.TypingSubst.forget, BoolTerm.TypingSubst.forget
+
+  mod def Typing.rename extends NatExt.Typing.rename, BoolTerm.Typing.rename
+  mod def TypingSubst.lift extends NatExt.TypingSubst.lift, BoolTerm.TypingSubst.lift
+  mod def Typing.subst extends NatExt.Typing.subst, BoolTerm.Typing.subst
+
+  @[simp]
+  mod def LR extends NatExt.LR, BoolTerm.LR
+  @[simp]
+  mod def GR extends NatExt.GR, BoolTerm.GR
+  @[simp]
+  mod def SemanticTyping extends NatExt.SemanticTyping, BoolTerm.SemanticTyping
+  notation:170 Γ:170 " ⊨s " t:170 " : " A:170 => SemanticTyping Γ t A
+
+  mod def LR.typing extends NatExt.LR.typing, BoolTerm.LR.typing
+  mod def LR.monotone extends NatExt.LR.monotone, BoolTerm.LR.monotone
+  mod def GR.forget extends NatExt.GR.forget, BoolTerm.GR.forget
+
+  mod def cr extends NatExt.cr, BoolTerm.cr
+  mod def LR.var extends NatExt.LR.var, BoolTerm.LR.var
+
+  mod def GR.from_ren extends NatExt.GR.from_ren, BoolTerm.GR.from_ren
+  mod def GR.compose extends NatExt.GR.compose, BoolTerm.GR.compose
+  mod def GR.su extends NatExt.GR.su, BoolTerm.GR.su
+
+  mod def LR.nrec_neutral extends NatExt.LR.nrec_neutral
+  mod def LR.ite_neutral  extends BoolTerm.LR.ite_neutral
+
+  mod def LR.app extends NatExt.LR.app, BoolTerm.LR.app
+modular (name := `Part2) (imports := #[`BoolNatTerm])
+#exit
+  set_option trace.Modular true in
+  mod def LR.nrec' extends NatExt.LR.natRec'
+  mod def LR.nrec  extends NatExt.LR.natRec
+  mod def LR.ite' extends BoolTerm.LR.ite'
+  mod def LR.ite  extends BoolTerm.LR.ite
+
+  mod def fundamental extends NatExt.fundamental, BoolTerm.fundamental
+  mod def strong_normalization_inductive extends NatExt.strong_normalization_inductive, BoolTerm.strong_normalization_inductive
+  mod def strong_normalization extends NatExt.strong_normalization, BoolTerm.strong_normalization

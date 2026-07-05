@@ -679,13 +679,14 @@ modular (name := `BoolTerm)
         rename_i ih _
         apply ih
 
-  mod def SNi.SnAntiRenameLemmaType extends SNi.SnAntiRenameLemmaType
+  mod def SnAntiRenameLemmaType extends SNi.SnAntiRenameLemmaType
 
   mod def antirename extends SNi.antirename where
     finally
     all_goals
       repeat intro
-      try grind
+      subst_vars
+      try simp at *
     · rename_i z e
       cases z <;> simp only [subst_var,subst_app,subst_lam,subst_true, subst_false,subst_ite] at e <;> try cases e
       exact SNi.true
@@ -721,14 +722,14 @@ modular (name := `BoolTerm)
       apply iteStep
       assumption
 
-  mod def SNi.SnBetaVarLemmaType extends SNi.SnBetaVarLemmaType
+  mod def SnBetaVarLemmaType extends SNi.SnBetaVarLemmaType
 
   mod def beta_var extends SNi.beta_var where
     finally
       all_goals try grind (splits := 0) only [SNi.SnBetaVarLemmaType]
 
   @[simp]
-  mod def SNi.SnPropertyWeakenLemmaType extends SNi.SnPropertyWeakenLemmaType
+  mod def SnPropertyWeakenLemmaType extends SNi.SnPropertyWeakenLemmaType
 
   mod def property_weaken extends SNi.property_weaken where
     finally
@@ -738,7 +739,7 @@ modular (name := `BoolTerm)
     · intros; constructor
     · intros; apply Red.ite1; assumption
 
-  mod def SNi.SnSoundLemmaType extends SNi.SnSoundLemmaType
+  mod def SnSoundLemmaType extends SNi.SnSoundLemmaType
 
   mod def sound extends SNi.sound where
     finally
@@ -865,7 +866,7 @@ notation:170 Γ:170 " ⊨s " t:170 " : " A:170 => SemanticTyping Γ t A
 
 theorem LR.typing : LR Γ A t -> Γ ⊢ t : A := by
   intro j; induction A generalizing Γ t
-  all_goals simp at j; grind
+  all_goals exact j.1
 
 theorem LR.monotone (m : Γ -⟨r⟩> Δ) : LR Γ A t -> LR Δ A t[r] := by
   intro h; induction A generalizing Γ Δ t r
@@ -951,7 +952,7 @@ theorem GR.su (j : LR Δ A a) (m : GR Γ Δ σ) : GR (A::Γ) Δ (su a::σ)
   | 0, T, h => cast (by simp; grind) j
   | x + 1, T, h => m h
 
-theorem LR.nrec_neutral
+theorem LR.ite_neutral
     (h1 : LR Γ A z)
     (h2 : LR Γ A s)
     (h3 : Γ ⊢ n : Ty.bool)
@@ -962,22 +963,22 @@ theorem LR.nrec_neutral
     cr.2.1 _ lem (SNi.iteNeu h4 (cr.1 _ _ h1) (cr.1  _ _ h2))
 
   theorem LR.app (flr : LR Γ (A -t> B) f) (alr : LR Γ A a) : LR Γ B (f.app a) :=
-    cast (by simp) $ flr.2 TypingRen.id alr
+    cast (by simp) <| flr.2 TypingRen.id alr
 
   theorem LR.ite' (h1 : LR Γ A z) (h2 : LR Γ A s)
       : (t : SNi v n) → (e : v = .nor) →
       let n' :  SnIndices .nor := e ▸ n;
       (j : Γ ⊢ n' : Ty.bool) → LR Γ A (.ite n' z s)
-    | .lam t, rfl,j => by cases j
+    | .lam t, rfl, j => nomatch j
     | .true, rfl, j =>
-      let j' := (Typing.ite j (LR.typing h1) (LR.typing h2))
+      let j' := Typing.ite j (LR.typing h1) (LR.typing h2)
       cr.2.2 _ _ j' (SNi.iteTrue (cr.1 _ _ h2)) h1
     | .false, rfl, j =>
       let j' := (Typing.ite j (LR.typing h1) (LR.typing h2))
       cr.2.2 _ _ j' (SNi.iteFalse (cr.1 _ _ h1)) h2
-    | .neu t, rfl,j => nrec_neutral h1 h2 j t
+    | .neu t, rfl,j => ite_neutral h1 h2 j t
     | .red r t', rfl,j =>
-      let j' := (Typing.ite j (LR.typing h1) (LR.typing h2))
+      let j' := Typing.ite j (LR.typing h1) (LR.typing h2)
       let r' := SNi.property_weaken r
       cr.2.2 _ _ j' (SNi.iteStep r) (ite' h1 h2 t' rfl (preservation_step j r'))
     termination_by structural t => t
