@@ -225,13 +225,12 @@ modular (name := `BoolTerm)
   open LeanSubst in
   theorem triangle {t s : Term} : ParRed t s -> ParRed s (complete t) := by
     intro r; fun_induction complete generalizing s <;> try grind
-    case case1  =>
-      cases r
-      apply hsubst
-      intro x; cases x
-      apply ActionRed.su; grind
-      apply ActionRed.re; grind
-      grind
+    cases r
+    apply hsubst
+    intro x; cases x
+    apply ActionRed.su; solve_by_elim
+    apply ActionRed.re; solve_by_elim
+    grind only [beta]
 
   add_mapping _root_.ParRed.triangle => ParRed.triangle
 
@@ -312,7 +311,7 @@ modular (name := `BoolTerm)
 
   mod def preservation_of_neutral_step extends Red.preservation_of_neutral_step where
     finally
-      all_goals try grind only
+      all_goals try intro; simp at *
       intro _ _ _ h1 ih _ r
       cases r <;> first
         | constructor;assumption
@@ -329,7 +328,7 @@ modular (name := `BoolTerm)
     | true  : Typing Γ .true .bool
     | false : Typing Γ .false .bool
     | ite : Typing Γ b .bool → Typing Γ Pt A → Typing Γ Pf A → Typing Γ (.ite b Pt Pf) A
-  notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
+  scoped notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
 
   attribute [grind .] Typing.var Typing.app Typing.lam Typing.true Typing.false Typing.ite
 
@@ -969,7 +968,6 @@ theorem LR.ite_neutral
       : (t : SNi v n) → (e : v = .nor) →
       let n' :  SnIndices .nor := e ▸ n;
       (j : Γ ⊢ n' : Ty.bool) → LR Γ A (.ite n' z s)
-    | .lam t, rfl, j => nomatch j
     | .true, rfl, j =>
       let j' := Typing.ite j (LR.typing h1) (LR.typing h2)
       cr.2.2 _ _ j' (SNi.iteTrue (cr.1 _ _ h2)) h1

@@ -237,9 +237,9 @@ modular (name := `NatTerm)
       cases r
       apply hsubst
       intro x; cases x
-      apply ActionRed.su; grind
-      apply ActionRed.re; grind
-      grind
+      apply ActionRed.su; solve_by_elim
+      apply ActionRed.re; solve_by_elim
+      grind only [beta]
 
   add_mapping _root_.ParRed.triangle => ParRed.triangle
 
@@ -326,7 +326,7 @@ modular (name := `NatTerm)
 
   mod def preservation_of_neutral_step extends Red.preservation_of_neutral_step where
     finally
-      all_goals try grind only
+      all_goals try intro; simp at *
       intro _ _ _ h1 ih _ r
       cases r <;> first
         | constructor;assumption
@@ -344,7 +344,7 @@ modular (name := `NatTerm)
     | zero  : Typing Γ .zero .nat
     | succ  : Typing Γ n .nat → Typing Γ (.succ n) .nat
     | natRec : Typing Γ P0 A → Typing Γ PS (Ty.nat.arrow (A.arrow A)) → Typing Γ n .nat → Typing Γ (.natRec P0 PS n) A
-  notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
+  scoped notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
 
   attribute [grind .] Typing.var Typing.app Typing.lam Typing.zero Typing.succ Typing.natRec
 
@@ -1034,7 +1034,6 @@ theorem LR.nrec_neutral
       : (t : SNi v n) → (e : v = .nor) →
       let n' :  SnIndices .nor := e ▸ n;
       (j : Γ ⊢ n' : Ty.nat) → LR Γ A (.natRec z s n')
-    | .lam t, rfl,j => by cases j
     | .zero, rfl,j =>
       let j' := (Typing.natRec (LR.typing h1) (LR.typing h2) j)
       cr.2.2 _ _ j' (SNi.natRecZero (cr.1 _ _ h2)) h1

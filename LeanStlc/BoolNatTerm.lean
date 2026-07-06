@@ -9,6 +9,7 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   namespace BoolNatTerm
 
   inductive Ty extends NatExt.Ty, BoolTerm.Ty
+  infixr:40 " -t> " => Ty.arrow
 
   -- TODO this should not be needed here
   set_option match.ignoreUnusedAlts true
@@ -113,6 +114,9 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   @[grind .]
   mod def subst_red_lift extends NatExt.ParRed.subst_red_lift, BoolTerm.ParRed.subst_red_lift
 
+  -- TODO random failure in `mergeExprs` not being able to merge different-but-defeq fvars
+  -- mod def hsubst extends NatExt.ParRed.hsubst, BoolTerm.ParRed.hsubst
+
   theorem hsubst {t t' : Term} {σ σ' : LeanSubst.Subst Term} :
     (∀ x, ActionRed ParRed (σ x) (σ' x)) ->
     ParRed t t' ->
@@ -121,10 +125,10 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   add_mapping NatExt.ParRed.hsubst => ParRed.hsubst
   add_mapping BoolTerm.ParRed.hsubst => ParRed.hsubst
 
-
   @[simp, grind]
   mod def complete extends NatExt.ParRed.complete, BoolTerm.ParRed.complete
 
+  -- TODO this requires adding a mapping between `induct_unfolding` aux theorems in order to work.
   -- mod def triangle extends NatExt.ParRed.triangle, BoolTerm.ParRed.triangle
 
   theorem triangle {t s : Term} : ParRed t s -> ParRed s (complete t) := sorry
@@ -172,11 +176,10 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
 
   mod def instHasConfluenceTerm extends NatExt.Red.instHasConfluenceTerm, BoolTerm.Red.instHasConfluenceTerm
 
-  -- TODO fix perf issue here
-  -- mod def preservation_of_neutral_step extends NatExt.Red.preservation_of_neutral_step, BoolTerm.Red.preservation_of_neutral_step
+  mod def preservation_of_neutral_step extends NatExt.Red.preservation_of_neutral_step, BoolTerm.Red.preservation_of_neutral_step where
+    finally
+      all_goals intros; simp at *
 
-  -- Bandaid fix
-  theorem preservation_of_neutral_step : Neutral t -> Red t t' -> Neutral t' := sorry
   add_mapping NatExt.Red.preservation_of_neutral_step => preservation_of_neutral_step
   add_mapping BoolTerm.Red.preservation_of_neutral_step => preservation_of_neutral_step
 
@@ -187,6 +190,8 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   inductive Typing extends NatExt.Typing, BoolTerm.Typing
 
   notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
+
+modular (name := `Part2) (imports := #[`BoolNatTerm])
 
   attribute [grind .] Typing.var Typing.app Typing.lam Typing.zero Typing.succ Typing.natRec Typing.true Typing.false Typing.ite
 
@@ -381,9 +386,6 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   mod def LR.ite_neutral  extends BoolTerm.LR.ite_neutral
 
   mod def LR.app extends NatExt.LR.app, BoolTerm.LR.app
-modular (name := `Part2) (imports := #[`BoolNatTerm])
-#exit
-  set_option trace.Modular true in
   mod def LR.nrec' extends NatExt.LR.natRec'
   mod def LR.nrec  extends NatExt.LR.natRec
   mod def LR.ite' extends BoolTerm.LR.ite'
