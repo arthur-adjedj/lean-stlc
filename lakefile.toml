@@ -14,10 +14,11 @@ scope = "leanprover-community"
 git = "https://github.com/leanprover-community/aesop"
 rev = "master"
 
-# TODO put real git dependency once the project gets stable enough
 [[require]]
 name = "LeanALaCarte"
-path = "/home/belazy/Documents/LeanALaCarte"
+scope = "leanprover-community"
+git = "https://github.com/arthur-adjedj/LeanALaCarte"
+rev = "main"
 
 [[lean_lib]]
 name = "LeanStlc"
