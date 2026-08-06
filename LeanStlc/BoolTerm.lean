@@ -21,10 +21,10 @@ namespace LeanSubst.Star
   (.step (.step .refl h₁) h₂)
 end LeanSubst.Star
 
-modular (name := `BoolTerm)
+modular BoolTerm
   namespace BoolTerm
 
-  inductive Ty extends Ty where
+  mod inductive Ty extends Ty where
     | bool
 
   notation "⊤" => Ty.base
@@ -37,13 +37,13 @@ modular (name := `BoolTerm)
   @[implicit_reducible,instance] -- TODO infer reducibility/instance attribute from what it extends
   mod def instReprTy extends instReprTy
 
-  inductive Term extends Term where
+  mod inductive Term extends Term where
     | true : Term
     | false : Term
     -- if b then Pt else Pf
     | ite : Term → Term → Term → Term
 
-  inductive Neutral extends Neutral where
+  mod inductive Neutral extends Neutral where
     | ite : Neutral b → Neutral (.ite b Pt Pf)
 
   mod def Term.repr extends _root_.Term.repr where
@@ -142,7 +142,7 @@ modular (name := `BoolTerm)
   mod def ren_subst_apply_eq extends ren_subst_apply_eq where
     finally all_goals grind
 
-  inductive ParRed extends ParRed where
+  mod inductive ParRed extends ParRed where
     | true : ParRed .true .true
     | false : ParRed .false .false
     | ite :
@@ -239,7 +239,7 @@ modular (name := `BoolTerm)
   mod def instHasTriangleTerm extends ParRed.instHasTriangleTerm
   end ParRed
 
-  inductive Red extends Red where
+  mod inductive Red extends Red where
     | ite1 :
       Red b b' ->
       Red (.ite b Pt Pf) (.ite b' Pt Pf)
@@ -324,7 +324,7 @@ modular (name := `BoolTerm)
 
   end Red
 
-  inductive Typing extends Typing where
+  mod inductive Typing extends Typing where
     | true  : Typing Γ .true .bool
     | false : Typing Γ .false .bool
     | ite : Typing Γ b .bool → Typing Γ Pt A → Typing Γ Pf A → Typing Γ (.ite b Pt Pf) A
@@ -385,7 +385,7 @@ modular (name := `BoolTerm)
   @[grind]
   mod def Term.is_lam extends _root_.Term.is_lam
 
-  inductive Value extends Value where
+  mod inductive Value extends Value where
     | true : Value .true
     | false : Value .false
     | ite : Value b → Value Pt → Value Pf →
@@ -395,7 +395,7 @@ modular (name := `BoolTerm)
     finally
       all_goals try grind only [Term.is_bool_lit]
 
-  inductive VarSpine extends VarSpine where
+  mod inductive VarSpine extends VarSpine where
     | ite : VarSpine b → Value Pt → Value Pf → VarSpine (.ite b Pt Pf)
 
   mod def var_spine_not_lam extends var_spine_not_lam where
@@ -427,7 +427,7 @@ modular (name := `BoolTerm)
           | apply Red.ite2; assumption
           | apply Red.ite3; assumption
 
-  inductive SnHeadRed extends SnHeadRed where
+  mod inductive SnHeadRed extends SnHeadRed where
     | iteTrue  : SN Red Pf → SnHeadRed (.ite .true Pt Pf) Pt
     | iteFalse : SN Red Pt → SnHeadRed (.ite .false Pt Pf) Pf
     | iteStep : SnHeadRed b b' -> SnHeadRed (.ite b Pt Pf) (.ite b' Pt Pf)
@@ -647,7 +647,7 @@ modular (name := `BoolTerm)
   @[reducible]
   mod def SnIndices extends SnIndices
 
-  inductive SNi extends SNi where
+  mod inductive SNi extends SNi where
     | true : SNi .nor .true
     | false : SNi .nor .false
     | iteNeu : SNi .neu b → SNi .nor Pt → SNi .nor Pf → SNi .neu (.ite b Pt Pf)
@@ -764,7 +764,7 @@ modular (name := `BoolTerm)
       solve_by_elim
 
   end SNi
-
+modular end _root_.BoolTerm
 
 structure TypingRen (r : Ren) (Γ Δ : List Ty) where
   act : ∀ {x T}, Γ[x]? = some T -> Δ[r x]? = some T

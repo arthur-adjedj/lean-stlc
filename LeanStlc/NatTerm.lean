@@ -21,10 +21,10 @@ namespace LeanSubst.Star
   (.step (.step .refl h₁) h₂)
 end LeanSubst.Star
 
-modular (name := `NatTerm)
+modular NatTerm
   namespace NatExt
 
-  inductive Ty extends Ty where
+  mod inductive Ty extends Ty where
     | nat
 
   notation "⊤" => Ty.base
@@ -37,13 +37,13 @@ modular (name := `NatTerm)
   @[implicit_reducible,instance] -- TODO infer reducibility/instance attribute from what it extends
   mod def instReprTy extends instReprTy
 
-  inductive Term extends Term where
+  mod inductive Term extends Term where
     | zero : Term
     | succ : Term → Term
     -- Nat.rec P0     PS     n
     | natRec : Term → Term → Term → Term
 
-  inductive Neutral extends Neutral where
+  mod inductive Neutral extends Neutral where
     | natRec : Neutral n → Neutral (.natRec P0 PS n)
 
   mod def Term.repr extends _root_.Term.repr where
@@ -145,7 +145,7 @@ modular (name := `NatTerm)
     finally all_goals grind
 
 -- modular (imports := #[`Term]) (name := `ParRed)
-  inductive ParRed extends ParRed where
+  mod inductive ParRed extends ParRed where
     | zero : ParRed .zero .zero
     | succ : ParRed n₁ n₂ → ParRed n₁.succ n₂.succ
     | natRec {P0 P0' PS PS' n n'} :
@@ -249,7 +249,7 @@ modular (name := `NatTerm)
   end ParRed
 
 -- modular (name := `Red) (imports := #[`ParRed])
-  inductive Red extends Red where
+  mod inductive Red extends Red where
     | succ : Red n₁ n₂ → Red n₁.succ n₂.succ
     | natRec1 {P0 P0' PS n} :
       Red P0 P0' ->
@@ -340,7 +340,7 @@ modular (name := `NatTerm)
   end Red
 
 -- modular (name := `Typing) (imports := #[`Term])
-  inductive Typing extends Typing where
+  mod inductive Typing extends Typing where
     | zero  : Typing Γ .zero .nat
     | succ  : Typing Γ n .nat → Typing Γ (.succ n) .nat
     | natRec : Typing Γ P0 A → Typing Γ PS (Ty.nat.arrow (A.arrow A)) → Typing Γ n .nat → Typing Γ (.natRec P0 PS n) A
@@ -419,7 +419,7 @@ modular (name := `NatTerm)
   @[grind]
   mod def Term.is_lam extends _root_.Term.is_lam
 
-  inductive Value extends Value where
+  mod inductive Value extends Value where
     | zero : Value .zero
     | succ : Value n → Value (.succ n)
     | natRec : Value P0 → Value PS → Value n →
@@ -429,7 +429,7 @@ modular (name := `NatTerm)
     finally
       all_goals try grind only [Term.is_nat_lit]
 
-  inductive VarSpine extends VarSpine where
+  mod inductive VarSpine extends VarSpine where
     | natRec : Value P0 → Value PS → VarSpine n → VarSpine (.natRec P0 PS n)
 
   mod def var_spine_not_lam extends var_spine_not_lam where
@@ -471,7 +471,7 @@ modular (name := `NatTerm)
 
 -- modular (name := `SNi) (imports := #[`Progress])
 
-  inductive SnHeadRed extends SnHeadRed where
+  mod inductive SnHeadRed extends SnHeadRed where
     | natRecZero : SN Red PS → SnHeadRed (.natRec P0 PS .zero) P0
     | natRecSucc : SnHeadRed (.natRec P0 PS (.succ n)) (.app (.app PS n) (.natRec P0 PS n))
     | natRecStep : SnHeadRed n n' -> SnHeadRed (.natRec P0 PS n) (.natRec P0 PS n')
@@ -709,7 +709,7 @@ modular (name := `NatTerm)
   @[reducible]
   mod def SnIndices extends SnIndices
 
-  inductive SNi extends SNi where
+  mod inductive SNi extends SNi where
     | zero : SNi .nor .zero
     | succ {n} : SNi .nor n → SNi .nor n.succ
     | natRecNeu : SNi .nor P0 → SNi .nor PS → SNi .neu n → SNi .neu (.natRec P0 PS n)
@@ -831,7 +831,7 @@ modular (name := `NatTerm)
       solve_by_elim
 
   end SNi
-
+modular end _root_.NatTerm
 structure TypingRen (r : Ren) (Γ Δ : List Ty) where
   act : ∀ {x T}, Γ[x]? = some T -> Δ[r x]? = some T
 

@@ -4,11 +4,11 @@ import LeanStlc.BoolTerm
 open LeanSubst
 
 
-modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
+modular BoolNatTerm (imports := BoolTerm, NatTerm)
 
   namespace BoolNatTerm
 
-  inductive Ty extends NatExt.Ty, BoolTerm.Ty
+  mod inductive Ty extends NatExt.Ty, BoolTerm.Ty
   infixr:40 " -t> " => Ty.arrow
 
   -- TODO this should not be needed here
@@ -18,9 +18,9 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   @[implicit_reducible,instance] -- TODO infer reducibility/instance attribute from what it extends
   mod def instReprTy extends NatExt.instReprTy, BoolTerm.instReprTy
 
-  inductive Term extends NatExt.Term, BoolTerm.Term
+  mod inductive Term extends NatExt.Term, BoolTerm.Term
 
-  inductive Neutral extends NatExt.Neutral, BoolTerm.Neutral
+  mod inductive Neutral extends NatExt.Neutral, BoolTerm.Neutral
 
   mod def Term.repr extends NatExt.Term.repr, BoolTerm.Term.repr
 
@@ -96,7 +96,7 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   mod def ren_subst_apply_eq extends NatExt.ren_subst_apply_eq, BoolTerm.ren_subst_apply_eq
 
 -- modular (imports := #[`Term]) (name := `ParRed)
-  inductive ParRed extends NatExt.ParRed, BoolTerm.ParRed where
+  mod inductive ParRed extends NatExt.ParRed, BoolTerm.ParRed where
 
   attribute [grind] ParRed
 
@@ -143,7 +143,7 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
   end ParRed
 
 -- modular (name := `Red) (imports := #[`ParRed])
-  inductive Red extends NatExt.Red, BoolTerm.Red
+  mod inductive Red extends NatExt.Red, BoolTerm.Red
 
 
   attribute [grind] Red
@@ -187,11 +187,9 @@ modular (name := `BoolNatTerm) (imports := #[`BoolTerm, `NatTerm])
 
   end Red
 
-  inductive Typing extends NatExt.Typing, BoolTerm.Typing
+  mod inductive Typing extends NatExt.Typing, BoolTerm.Typing
 
   notation:170 Γ:170 " ⊢ " t:170 " : " A:170 => Typing Γ t A
-
-modular (name := `Part2) (imports := #[`BoolNatTerm])
 
   attribute [grind .] Typing.var Typing.app Typing.lam Typing.zero Typing.succ Typing.natRec Typing.true Typing.false Typing.ite
 
@@ -228,13 +226,13 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
   @[grind]
   mod def Term.is_lam extends NatExt.Term.is_lam, BoolTerm.Term.is_lam
 
-  inductive Value extends NatExt.Value, BoolTerm.Value
+  mod inductive Value extends NatExt.Value, BoolTerm.Value
 
   mod def value_sound extends NatExt.value_sound, BoolTerm.value_sound where
     finally
       all_goals grind (splits := 0) only
 
-  inductive VarSpine extends NatExt.VarSpine, BoolTerm.VarSpine where
+  mod inductive VarSpine extends NatExt.VarSpine, BoolTerm.VarSpine where
 
   mod def var_spine_not_lam extends NatExt.var_spine_not_lam, BoolTerm.var_spine_not_lam
 
@@ -246,7 +244,7 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
         cases h
         contradiction
 
-  inductive SnHeadRed extends NatExt.SnHeadRed, BoolTerm.SnHeadRed
+  mod inductive SnHeadRed extends NatExt.SnHeadRed, BoolTerm.SnHeadRed
   infix:80 " ~>sn " => SnHeadRed
 
   mod def SnHeadRed.red_compatible extends NatExt.SnHeadRed.red_compatible, BoolTerm.SnHeadRed.red_compatible where
@@ -296,7 +294,7 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
   @[reducible]
   mod def SnIndices extends NatExt.SnIndices, BoolTerm.SnIndices
 
-  inductive SNi extends NatExt.SNi, BoolTerm.SNi
+  mod inductive SNi extends NatExt.SNi, BoolTerm.SNi
 
   namespace SNi
   mod def SnRenameLemmaType extends NatExt.SNi.SnRenameLemmaType, BoolTerm.SNi.SnRenameLemmaType
@@ -329,7 +327,7 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
 
   end SNi
 
-  inductive TypingRen extends NatExt.TypingRen, BoolTerm.TypingRen
+  mod inductive TypingRen extends NatExt.TypingRen, BoolTerm.TypingRen
   notation:35 Γ:35 "-⟨" r "⟩>" Δ:35 => TypingRen r Γ Δ
 
   --TODO! add structure extensions, map structure fields accordingly
@@ -345,7 +343,7 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
 
   infixr:90 " ∘ "  => TypingRen.comp
 
-  inductive TypingSubst extends NatExt.TypingSubst, BoolTerm.TypingSubst
+  mod inductive TypingSubst extends NatExt.TypingSubst, BoolTerm.TypingSubst
   notation:35 Γ:35 " -[" σ "]> " Δ:35 => TypingSubst σ Γ Δ
 
   theorem TypingSubst.act {σ : Subst Term} {Γ Δ : List Ty}  (self : TypingSubst σ Γ Δ) {x : Nat} {T : Ty} : Γ[x]? = some T → Δ ⊢ σ x : T := self.1
@@ -394,3 +392,4 @@ modular (name := `Part2) (imports := #[`BoolNatTerm])
   mod def fundamental extends NatExt.fundamental, BoolTerm.fundamental
   mod def strong_normalization_inductive extends NatExt.strong_normalization_inductive, BoolTerm.strong_normalization_inductive
   mod def strong_normalization extends NatExt.strong_normalization, BoolTerm.strong_normalization
+modular end _root_.BoolNatTerm
