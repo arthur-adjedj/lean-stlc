@@ -1,8 +1,8 @@
-import LeanALaCarte.ModMap
-import LeanALaCarte.CheckTranslation
-import LeanALaCarte.ExtendInd
-import LeanALaCarte.ModularCommand
-import LeanALaCarte.ModDef
+import Gemel.ModMap
+import Gemel.CheckTranslation
+import Gemel.ExtendInd
+import Gemel.ModularCommand
+import Gemel.ModDef
 import LeanStlc.Reduction
 import LeanStlc.Term
 import LeanStlc.Typing
@@ -31,7 +31,7 @@ modular BoolTerm
   infixr:40 " -t> " => Ty.arrow
 
   mod def Ty.repr extends Ty.repr where
-    matcher match_1 with
+    extend match_1 with
       | .bool => "𝔹"
 
   @[implicit_reducible,instance] -- TODO infer reducibility/instance attribute from what it extends
@@ -47,7 +47,7 @@ modular BoolTerm
     | ite : Neutral b → Neutral (.ite b Pt Pf)
 
   mod def Term.repr extends _root_.Term.repr where
-    matcher match_1 x y z with
+    extend match_1 x y z with
       | .true => "tt"
       | .false => "ff"
       | .ite b Pt Pf => s!"if {Term.repr b p} then ({Term.repr Pt p}) else ({Term.repr Pf p})"
@@ -78,7 +78,7 @@ modular BoolTerm
 
   @[simp]
   mod def smap extends smap where
-    matcher match_1 k lf f with
+    extend match_1 k lf f with
       | .true => .true
       | .false => .false
       | .ite b Pt Pf => .ite (smap k lf f b) (smap k lf f Pt) (smap k lf f Pf)
@@ -211,7 +211,7 @@ modular BoolTerm
 
   @[simp, grind]
   mod def complete extends ParRed.complete where
-    matcher match_1 with
+    extend match_1 with
       | .true => .true
       | .false => .false
       | .ite .true Pt _ => complete Pt
@@ -363,12 +363,12 @@ modular BoolTerm
   add_mapping _root_.instDecidableEqTy => instDecidableEqTy
 
   mod def is_arrow extends is_arrow where
-    matcher match_1 with
+    extend match_1 with
       | .bool => .none
 
   @[simp]
   mod def infer extends infer where
-    matcher match_3 Γ with
+    extend match_3 Γ with
       | .true => some .bool
       | .false => some .bool
       | .ite b Pt Pf => do
