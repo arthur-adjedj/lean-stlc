@@ -105,7 +105,20 @@ theorem apply_id {t : Term} : t[+0] = t := by
 
 theorem apply_stable (r : Ren) (σ : Subst Term)
   : r.to = σ -> Ren.apply r = Subst.apply σ
-:= by solve_stable r, σ
+:= by
+  rintro ⟨⟩
+  funext t
+  simp [Subst.apply, Ren.apply]
+  induction t generalizing r with
+  | var => rfl
+  | app _ _ ih₁ ih₂ =>
+    simp [SubstMap.smap] at ih₁ ih₂ ⊢
+    constructor
+    · apply ih₁
+    · apply ih₂
+  | lam _ _ ih =>
+    simp [SubstMap.smap, ← Ren.to_lift] at ih ⊢
+    apply ih
 
 instance SubstMapStable_Term : SubstMapStable Term where
   apply_id := apply_id

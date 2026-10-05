@@ -8,6 +8,3 @@ import LeanStlc.WeakNorm
 import LeanStlc.SNi
 import LeanStlc.StrongNorm
 import LeanStlc.Infer
-import LeanStlc.NatTerm
-import LeanStlc.BoolTerm
-import LeanStlc.BoolNatTerm
